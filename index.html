@@ -774,15 +774,15 @@
 
   <section class="controls">
     <input type="search" id="search" placeholder="Search subject, sender, summary…" />
-    <div class="pill-group" id="officePills">
-      <span class="pill active" data-office="all">All Offices</span>
-      <span class="pill" data-office="house">House</span>
-      <span class="pill" data-office="senate">Senate</span>
-      <span class="pill" data-office="governor">Governor</span>
-      <span class="pill" data-office="presidential">Pres</span>
-      <span class="pill" data-office="pac">PAC</span>
-      <span class="pill" data-office="other">Other</span>
-    </div>
+    <select id="officeSel">
+      <option value="all">All Offices</option>
+      <option value="house">House</option>
+      <option value="senate">Senate</option>
+      <option value="governor">Governor</option>
+      <option value="presidential">Presidential</option>
+      <option value="pac">PAC</option>
+      <option value="other">Other</option>
+    </select>
     <div class="pill-group" id="leanPills">
       <span class="pill active" data-lean="all">All</span>
       <span class="pill" data-lean="democrat">Dem</span>
@@ -840,15 +840,6 @@
 
   <section class="panel">
     <h3>Geography <span class="count" id="geoCount">—</span></h3>
-    <div class="office-tabs" id="officeTabs">
-      <span class="office-tab active" data-office="all">All</span>
-      <span class="office-tab" data-office="house">House</span>
-      <span class="office-tab" data-office="senate">Senate</span>
-      <span class="office-tab" data-office="governor">Governor</span>
-      <span class="office-tab" data-office="presidential">Presidential</span>
-      <span class="office-tab" data-office="pac">PAC</span>
-      <span class="office-tab" data-office="other">Other</span>
-    </div>
     <div class="geo-layout">
       <div class="geo-map" id="geoMap"></div>
       <div class="geo-detail" id="geoDetail"></div>
@@ -1953,25 +1944,18 @@ document.querySelectorAll("#leanPills .pill").forEach(p => {
   });
 });
 
-// Unified setter so the top pills, geography tabs, and office cards all stay in sync
+// Unified setter so the top dropdown and Office Mix cards stay in sync
 function setOfficeFilter(office) {
   currentOfficeFilter = office;
   selectedState = null;
-  document.querySelectorAll("#officePills .pill").forEach(x =>
-    x.classList.toggle("active", x.dataset.office === office));
-  document.querySelectorAll("#officeTabs .office-tab").forEach(x =>
-    x.classList.toggle("active", x.dataset.office === office));
+  const sel = document.getElementById("officeSel");
+  if (sel && sel.value !== office) sel.value = office;
   applyFilters();   // re-runs the global filter and triggers a full re-render
 }
 
-// Top-level office pills (control bar)
-document.querySelectorAll("#officePills .pill").forEach(p => {
-  p.addEventListener("click", () => setOfficeFilter(p.dataset.office));
-});
-
-// Office tabs inside Geography panel — keep in sync with the top pills
-document.querySelectorAll("#officeTabs .office-tab").forEach(t => {
-  t.addEventListener("click", () => setOfficeFilter(t.dataset.office));
+// Top-level office dropdown
+document.getElementById("officeSel").addEventListener("change", e => {
+  setOfficeFilter(e.target.value);
 });
 
 loadData();

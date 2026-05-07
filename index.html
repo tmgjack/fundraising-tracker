@@ -6,39 +6,42 @@
 <title>Fundraising Tracker — Issues & Entities</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=IBM+Plex+Serif:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
   :root {
-    --bg: #0e0d0b;
-    --panel: #181714;
-    --panel-2: #1f1d19;
-    --border: #2a2823;
-    --ink: #f5f1e8;
-    --ink-dim: #9c968a;
-    --ink-faint: #635e54;
-    --accent: #d4a017;
-    --accent-2: #c14d3d;
-    --dem: #4a7ba6;
-    --rep: #b14a3a;
-    --ind: #8a8579;
-    --shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.4);
+    /* Brand palette — light theme */
+    --bg: #f7f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f1f5;
+    --border: #d0d1db;          /* Light Cool Gray */
+    --ink: #1a1a1f;
+    --ink-dim: #888b95;          /* Cool Gray */
+    --ink-faint: #b5b7c0;
+    --accent: #6f2740;           /* Maroon */
+    --accent-2: #9e2339;         /* Deep Red */
+    --blue: #377f9d;             /* Aegean Blue */
+    --blue-light: #97c0d6;       /* Sky Blue */
+    --dem: #377f9d;              /* Aegean Blue for Dem */
+    --rep: #9e2339;              /* Deep Red for Rep */
+    --ind: #888b95;              /* Cool Gray for Ind */
+    --shadow: 0 1px 2px rgba(31, 39, 64, 0.04), 0 8px 24px rgba(31, 39, 64, 0.06);
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
   body {
     background-image:
-      radial-gradient(circle at 20% 0%, rgba(212,160,23,0.06), transparent 50%),
-      radial-gradient(circle at 90% 30%, rgba(193,77,61,0.04), transparent 40%);
+      radial-gradient(circle at 20% 0%, rgba(111,39,64,0.05), transparent 50%),
+      radial-gradient(circle at 90% 30%, rgba(55,127,157,0.04), transparent 40%);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -54,20 +57,37 @@
   }
   .brand { display: flex; flex-direction: column; gap: 4px; }
   .brand .eyebrow {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em;
     color: var(--ink-faint);
   }
   .brand h1 {
     margin: 0;
-    font-family: 'Fraunces', serif;
-    font-weight: 900; font-size: 36px; letter-spacing: -0.02em; line-height: 1;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 36px;
+    line-height: 1;
+    color: #ffffff;
+    background: var(--blue);
+    padding: 10px 18px;
+    display: inline-block;
   }
-  .brand h1 em { font-style: italic; font-weight: 500; color: var(--accent); }
+  .brand h1 em {
+    font-style: normal;
+    font-weight: 900;
+    color: #ffffff;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    display: inline;
+    text-transform: uppercase;
+  }
   .brand .sub { color: var(--ink-dim); font-size: 13px; margin-top: 4px; }
   .meta {
     text-align: right;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px; color: var(--ink-dim); line-height: 1.7;
   }
   .meta .pulse {
@@ -102,16 +122,16 @@
   .kpi.party-d::before { background: var(--dem); }
   .kpi.party-r::before { background: var(--rep); }
   .kpi .label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
     color: var(--ink-faint);
   }
   .kpi .val {
-    font-family: 'Fraunces', serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 32px; font-weight: 700; line-height: 1.1; margin-top: 6px;
   }
   .kpi .delta {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px; color: var(--ink-dim); margin-top: 4px;
   }
 
@@ -128,23 +148,23 @@
   .controls input[type="search"] { flex: 1; min-width: 220px; }
   .controls input[type="search"]:focus, .controls select:focus { border-color: var(--accent); }
   .controls .btn {
-    background: var(--accent); color: #1a1813; border: none; border-radius: 4px;
+    background: var(--accent); color: #ffffff; border: none; border-radius: 4px;
     padding: 8px 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
     text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
     cursor: pointer;
   }
-  .controls .btn:hover { background: #e8b427; }
+  .controls .btn:hover { background: #9e2339; }
   .controls .btn.ghost { background: transparent; color: var(--ink-dim); border: 1px solid var(--border); }
   .pill-group { display: flex; gap: 4px; }
   .pill {
     background: var(--panel-2); border: 1px solid var(--border); color: var(--ink-dim);
     padding: 6px 12px; border-radius: 999px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
     cursor: pointer; transition: all .15s;
   }
   .pill.active, .pill:hover {
-    background: var(--accent); color: #1a1813; border-color: var(--accent);
+    background: var(--accent); color: #ffffff; border-color: var(--accent);
   }
 
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -154,12 +174,12 @@
   }
   .panel h3 {
     margin: 0 0 14px;
-    font-family: 'Fraunces', serif;
+    font-family: 'Roboto', sans-serif;
     font-weight: 700; font-size: 18px; letter-spacing: -0.01em;
     display: flex; align-items: center; justify-content: space-between;
   }
   .panel h3 .count {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px; font-weight: 400; color: var(--ink-faint);
     text-transform: uppercase; letter-spacing: 0.1em;
   }
@@ -179,14 +199,14 @@
   }
   .bar-row .bar > span {
     position: absolute; left: 0; top: 0; bottom: 0;
-    background: linear-gradient(90deg, var(--accent), #e8b427);
+    background: linear-gradient(90deg, var(--accent), #9e2339);
   }
   .bar-row .num {
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
     color: var(--ink-dim); text-align: right;
   }
-  .bar-row.dem .bar > span { background: linear-gradient(90deg, var(--dem), #6a9bc7); }
-  .bar-row.rep .bar > span { background: linear-gradient(90deg, var(--rep), #d36b58); }
+  .bar-row.dem .bar > span { background: linear-gradient(90deg, var(--dem), #97c0d6); }
+  .bar-row.rep .bar > span { background: linear-gradient(90deg, var(--rep), #c14d62); }
 
   .feed { display: flex; flex-direction: column; }
   .feed-item {
@@ -199,12 +219,15 @@
   }
   .feed-item .sender { font-weight: 700; color: var(--ink); }
   .feed-item .when {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px; color: var(--ink-faint);
   }
   .feed-item .subj {
-    font-family: 'Fraunces', serif;
-    font-size: 16px; font-style: italic; color: var(--ink); line-height: 1.35;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.35;
   }
   .feed-item .summary { font-size: 13px; color: var(--ink-dim); }
   .feed-item {
@@ -212,10 +235,10 @@
     transition: background .12s;
   }
   .feed-item:hover {
-    background: rgba(212,160,23,0.03);
+    background: rgba(111,39,64,0.03);
   }
   .feed-item .open-hint {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px;
     color: var(--ink-faint);
     text-transform: uppercase;
@@ -255,7 +278,7 @@
   .modal-head {
     padding: 20px 24px 16px;
     border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(212,160,23,0.04), transparent);
+    background: linear-gradient(180deg, rgba(111,39,64,0.04), transparent);
     position: relative;
   }
   .modal-head .close {
@@ -282,23 +305,24 @@
     font-size: 14px;
   }
   .modal-head .sender-email {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px;
     color: var(--ink-faint);
   }
   .modal-head .date-line {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px;
     color: var(--ink-dim);
   }
   .modal-head h2 {
     margin: 8px 0 12px;
-    font-family: 'Fraunces', serif;
-    font-style: italic;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-style: normal;
     font-weight: 700;
     font-size: 22px;
-    line-height: 1.25;
-    letter-spacing: -0.01em;
+    line-height: 1.3;
+    color: var(--ink);
+    padding-right: 40px;
   }
   .modal-head .modal-tags {
     display: flex; flex-wrap: wrap; gap: 5px;
@@ -307,7 +331,7 @@
     padding: 14px 24px;
     background: var(--panel-2);
     border-bottom: 1px solid var(--border);
-    font-family: 'Fraunces', serif;
+    font-family: 'IBM Plex Serif', Georgia, serif;
     font-style: italic;
     font-size: 14px;
     color: var(--ink);
@@ -315,7 +339,7 @@
   }
   .modal-summary::before {
     content: 'AI summary · ';
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-style: normal;
     font-size: 10px;
     text-transform: uppercase;
@@ -326,7 +350,7 @@
     padding: 24px;
     max-height: 55vh;
     overflow-y: auto;
-    font-family: 'Inter Tight', sans-serif;
+    font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 14px;
     line-height: 1.7;
     color: var(--ink);
@@ -339,7 +363,7 @@
   .modal-body a {
     color: var(--accent);
     text-decoration: underline;
-    text-decoration-color: rgba(212,160,23,0.3);
+    text-decoration-color: rgba(111,39,64,0.3);
     word-break: break-all;
   }
   .modal-body .empty {
@@ -355,23 +379,23 @@
     flex-wrap: wrap;
   }
   .modal-actions .btn-primary {
-    background: var(--accent); color: #1a1813;
+    background: var(--accent); color: #ffffff;
     border: none; border-radius: 4px;
     padding: 8px 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
     text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
     cursor: pointer;
     text-decoration: none;
     display: inline-flex; align-items: center; gap: 6px;
   }
-  .modal-actions .btn-primary:hover { background: #e8b427; text-decoration: none; }
+  .modal-actions .btn-primary:hover { background: #9e2339; text-decoration: none; }
   .modal-actions .btn-ghost {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--ink-dim);
     padding: 8px 14px;
     border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -380,13 +404,13 @@
   .modal-actions .btn-ghost:hover { color: var(--ink); border-color: var(--accent); }
   .modal-actions .meta-info {
     margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px;
     color: var(--ink-faint);
   }
   .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
   .tag {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Roboto', sans-serif;
     font-size: 10px; text-transform: lowercase;
     padding: 3px 8px; border-radius: 3px;
     background: var(--panel-2); color: var(--ink-dim);
@@ -394,8 +418,8 @@
     cursor: pointer; transition: all .12s;
   }
   .tag:hover { color: var(--ink); border-color: var(--accent); }
-  .tag.issue { color: #d4c79e; border-color: #3d3825; }
-  .tag.entity { color: #c8d4e8; border-color: #2a3447; }
+  .tag.issue { color: #6f2740; border-color: #d0d1db; background: rgba(111,39,64,0.06); }
+  .tag.entity { color: #377f9d; border-color: #d0d1db; background: rgba(55,127,157,0.06); }
   .lean-dot {
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     margin-right: 2px; vertical-align: middle;
@@ -407,13 +431,13 @@
 
   .state {
     padding: 40px 20px; text-align: center; color: var(--ink-faint);
-    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-family: 'Roboto', sans-serif; font-size: 12px;
   }
 
   .active-filter {
     background: var(--accent-2); color: #fff;
     padding: 4px 10px; border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
     display: inline-flex; align-items: center; gap: 6px;
   }
   .active-filter button {
@@ -424,7 +448,7 @@
   footer {
     margin: 40px 32px 20px;
     text-align: center; color: var(--ink-faint);
-    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    font-family: 'Roboto', sans-serif; font-size: 10px;
     letter-spacing: 0.1em; text-transform: uppercase;
   }
 
@@ -535,9 +559,7 @@
   </div>
 </div>
 
-<footer>
-  Built on n8n + OpenAI · Inspired by HSG Dashboard architecture
-</footer>
+
 
 <script>
 // ============================================================
@@ -624,8 +646,8 @@ function normalizeRow(r) {
     party_lean: (r.party_lean || "unknown").toLowerCase(),
     sender_org: r.sender_org || r.from_name || r.from_domain,
     issues: splitTags(r.issues),
-    entities_people: splitTags(r.entities_people),
-    entities_orgs: splitTags(r.entities_orgs),
+    entities_people: canonPersonList(splitTags(r.entities_people)),
+    entities_orgs: filterOrgs(splitTags(r.entities_orgs)),
     one_line_summary: r.one_line_summary || "",
     body_text: r.body_text || r.body_excerpt || "",
     gmail_url: r.gmail_url || ""
@@ -635,6 +657,62 @@ function splitTags(s) {
   if (!s) return [];
   if (Array.isArray(s)) return s;
   return String(s).split(/[,;]/).map(x => x.trim()).filter(Boolean);
+}
+
+// Canonicalize person names — merge Trump variants, etc.
+const PERSON_ALIASES = {
+  'donald trump': 'Trump',
+  'president trump': 'Trump',
+  'donald j trump': 'Trump',
+  'donald j. trump': 'Trump',
+  'djt': 'Trump',
+  'pres trump': 'Trump',
+  'pres. trump': 'Trump',
+  'former president trump': 'Trump',
+  '45': 'Trump',
+  'joe biden': 'Biden',
+  'president biden': 'Biden',
+  'joseph biden': 'Biden',
+  'kamala harris': 'Harris',
+  'vp harris': 'Harris',
+  'alexandria ocasio-cortez': 'AOC',
+  'aoc': 'AOC',
+  'alexandria ocasio cortez': 'AOC',
+  'bernie sanders': 'Bernie Sanders',
+  'sen. sanders': 'Bernie Sanders',
+  'elizabeth warren': 'Warren',
+  'sen. warren': 'Warren',
+  'elon musk': 'Elon Musk',
+  'elon': 'Elon Musk',
+  'musk': 'Elon Musk',
+};
+function canonPerson(name) {
+  if (!name) return name;
+  const key = String(name).trim().toLowerCase();
+  return PERSON_ALIASES[key] || name.trim();
+}
+
+// Orgs to exclude from displays — they're noise (e.g. ActBlue is the universal donate platform)
+const EXCLUDED_ORGS = new Set([
+  'actblue',
+  'act blue',
+  'winred',
+  'win red',
+]);
+function filterOrgs(orgs) {
+  return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));
+}
+
+// Dedupe + canonicalize a list of names (for entities_people)
+function canonPersonList(list) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const c = canonPerson(raw);
+    const k = c.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(c); }
+  }
+  return out;
 }
 
 // FILTER
@@ -742,12 +820,12 @@ function renderVolumeChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Democrat', data: dem, backgroundColor: '#4a7ba6', stack: 's' },
-        { label: 'Republican', data: rep, backgroundColor: '#b14a3a', stack: 's' },
-        { label: 'Other/Unknown', data: oth, backgroundColor: '#635e54', stack: 's' }
+        { label: 'Democrat', data: dem, backgroundColor: '#377f9d', stack: 's' },
+        { label: 'Republican', data: rep, backgroundColor: '#9e2339', stack: 's' },
+        { label: 'Other/Unknown', data: oth, backgroundColor: '#888b95', stack: 's' }
       ]
     },
-    options: chartOpts({ stacked: true })
+    options: chartOpts({ stacked: true, yLabel: 'Number of Emails' })
   });
 }
 
@@ -762,7 +840,7 @@ function renderIssueChart() {
   if (charts.issue) charts.issue.destroy();
   charts.issue = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: '#d4a017', borderRadius: 2 }] },
+    data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
     options: {
       ...chartOpts({}),
       indexAxis: 'y',
@@ -857,24 +935,55 @@ function renderFeed() {
   }).join("");
 }
 
-function chartOpts({ stacked = false } = {}) {
+function chartOpts({ stacked = false, yLabel = '' } = {}) {
   return {
     responsive: true, maintainAspectRatio: false,
     scales: {
-      x: { stacked, ticks: { color: '#9c968a', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-      y: { stacked, ticks: { color: '#9c968a', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true }
+      x: {
+        stacked,
+        ticks: { color: '#888b95', font: { family: 'Roboto', size: 10 } },
+        grid: { color: 'rgba(31, 39, 64, 0.05)' }
+      },
+      y: {
+        stacked,
+        beginAtZero: true,
+        ticks: {
+          color: '#888b95',
+          font: { family: 'Roboto', size: 10 },
+          stepSize: 1,                       // integer ticks only
+          precision: 0,
+          callback: function(value) {
+            if (Number.isInteger(value)) return value;
+            return null;                      // hide non-integer labels
+          }
+        },
+        grid: { color: 'rgba(31, 39, 64, 0.05)' },
+        title: yLabel ? {
+          display: true,
+          text: yLabel,
+          color: '#6f2740',
+          font: { family: 'Roboto', size: 11, weight: '700' }
+        } : { display: false }
+      }
     },
     plugins: {
-      legend: { labels: { color: '#9c968a', font: { family: 'Inter Tight', size: 11 } } },
+      legend: { labels: { color: '#1a1a1f', font: { family: 'Roboto', size: 11, weight: '500' } } },
       tooltip: tooltipStyle()
     }
   };
 }
 function tooltipStyle() {
   return {
-    backgroundColor: '#1f1d19', borderColor: '#2a2823', borderWidth: 1,
-    titleColor: '#f5f1e8', bodyColor: '#f5f1e8',
-    titleFont: { family: 'Fraunces' }, bodyFont: { family: 'JetBrains Mono', size: 11 }
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d1db',
+    borderWidth: 1,
+    titleColor: '#6f2740',
+    bodyColor: '#1a1a1f',
+    titleFont: { family: 'Roboto', weight: '700', size: 12 },
+    bodyFont: { family: 'Roboto', size: 11 },
+    padding: 10,
+    cornerRadius: 4,
+    displayColors: true
   };
 }
 

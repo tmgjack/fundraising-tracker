@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fundraising Tracker — Issues & Entities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=IBM+Plex+Serif:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    /* Brand palette — light theme */
+    --bg: #f7f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f1f5;
+    --border: #d0d1db;          /* Light Cool Gray */
+    --ink: #1a1a1f;
+    --ink-dim: #888b95;          /* Cool Gray */
+    --ink-faint: #b5b7c0;
+    --accent: #6f2740;           /* Maroon */
+    --accent-2: #9e2339;         /* Deep Red */
+    --blue: #377f9d;             /* Aegean Blue */
+    --blue-light: #97c0d6;       /* Sky Blue */
+    --dem: #377f9d;              /* Aegean Blue for Dem */
+    --rep: #9e2339;              /* Deep Red for Rep */
+    --ind: #888b95;              /* Cool Gray for Ind */
+    --shadow: 0 1px 2px rgba(31, 39, 64, 0.04), 0 8px 24px rgba(31, 39, 64, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(111,39,64,0.05), transparent 50%),
+      radial-gradient(circle at 90% 30%, rgba(55,127,157,0.04), transparent 40%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header.top {
+    border-bottom: 1px solid var(--border);
+    padding: 22px 32px 18px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px;
+    background: linear-gradient(180deg, rgba(24,23,20,0.6), transparent);
+  }
+  .brand { display: flex; flex-direction: column; gap: 4px; }
+  .brand .eyebrow {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--ink-faint);
+  }
+  .brand h1 {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 36px;
+    line-height: 1;
+    color: #ffffff;
+    background: var(--blue);
+    padding: 10px 18px;
+    display: inline-block;
+  }
+  .brand h1 em {
+    font-style: normal;
+    font-weight: 900;
+    color: #ffffff;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    display: inline;
+    text-transform: uppercase;
+  }
+  .brand .sub { color: var(--ink-dim); font-size: 13px; margin-top: 4px; }
+  .meta {
+    text-align: right;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px; color: var(--ink-dim); line-height: 1.7;
+  }
+  .meta .pulse {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #6b9b6b;
+    box-shadow: 0 0 0 0 rgba(107,155,107,.7);
+    animation: pulse 2s infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(107,155,107,.6); }
+    70% { box-shadow: 0 0 0 8px rgba(107,155,107,0); }
+    100% { box-shadow: 0 0 0 0 rgba(107,155,107,0); }
+  }
+
+  main {
+    padding: 24px 32px 60px;
+    display: grid; grid-template-columns: 1fr; gap: 20px;
+    max-width: 1500px; margin: 0 auto;
+  }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px 18px; box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--accent); opacity: 0.6;
+  }
+  .kpi.party-d::before { background: var(--dem); }
+  .kpi.party-r::before { background: var(--rep); }
+  .kpi .label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--ink-faint);
+  }
+  .kpi .val {
+    font-family: 'Roboto', sans-serif;
+    font-size: 32px; font-weight: 700; line-height: 1.1; margin-top: 6px;
+  }
+  .kpi .delta {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px; color: var(--ink-dim); margin-top: 4px;
+  }
+
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 16px;
+  }
+  .controls input[type="search"], .controls select {
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 12px; font-family: inherit; font-size: 13px; outline: none;
+  }
+  .controls input[type="search"] { flex: 1; min-width: 220px; }
+  .controls input[type="search"]:focus, .controls select:focus { border-color: var(--accent); }
+  .controls .btn {
+    background: var(--accent); color: #ffffff; border: none; border-radius: 4px;
+    padding: 8px 14px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+    cursor: pointer;
+  }
+  .controls .btn:hover { background: #9e2339; }
+  .controls .btn.ghost { background: transparent; color: var(--ink-dim); border: 1px solid var(--border); }
+  .pill-group { display: flex; gap: 4px; }
+  .pill {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--ink-dim);
+    padding: 6px 12px; border-radius: 999px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
+    cursor: pointer; transition: all .15s;
+  }
+  .pill.active, .pill:hover {
+    background: var(--accent); color: #ffffff; border-color: var(--accent);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .panel h3 {
+    margin: 0 0 14px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700; font-size: 18px; letter-spacing: -0.01em;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel h3 .count {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px; font-weight: 400; color: var(--ink-faint);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .chart-wrap { position: relative; height: 320px; }
+
+  .bar-list { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row {
+    display: grid; grid-template-columns: 130px 1fr 40px;
+    align-items: center; gap: 10px; font-size: 13px;
+  }
+  .bar-row .label {
+    color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bar-row .bar {
+    height: 18px; background: var(--panel-2); border-radius: 2px;
+    position: relative; overflow: hidden;
+  }
+  .bar-row .bar > span {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--accent), #9e2339);
+  }
+  .bar-row .num {
+    font-family: 'Roboto', sans-serif; font-size: 11px;
+    color: var(--ink-dim); text-align: right;
+  }
+  .bar-row.dem .bar > span { background: linear-gradient(90deg, var(--dem), #97c0d6); }
+  .bar-row.rep .bar > span { background: linear-gradient(90deg, var(--rep), #c14d62); }
+
+  .feed { display: flex; flex-direction: column; }
+  .feed-item {
+    border-top: 1px solid var(--border);
+    padding: 14px 0; display: grid; grid-template-columns: 1fr; gap: 6px;
+  }
+  .feed-item:first-child { border-top: none; }
+  .feed-item .row1 {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .feed-item .sender { font-weight: 700; color: var(--ink); }
+  .feed-item .when {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px; color: var(--ink-faint);
+  }
+  .feed-item .subj {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .feed-item .summary { font-size: 13px; color: var(--ink-dim); }
+  .feed-item {
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .feed-item:hover {
+    background: rgba(111,39,64,0.03);
+  }
+  .feed-item .open-hint {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity .12s;
+  }
+  .feed-item:hover .open-hint { opacity: 1; }
+
+  /* MODAL */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    animation: fadeIn .15s ease;
+  }
+  .modal-backdrop.show { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 820px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-head {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(111,39,64,0.04), transparent);
+    position: relative;
+  }
+  .modal-head .close {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--ink-dim);
+    width: 30px; height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-head .close:hover { color: var(--ink); border-color: var(--accent); }
+  .modal-head .from-line {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding-right: 40px;
+  }
+  .modal-head .sender-name {
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .modal-head .sender-email {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .modal-head .date-line {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .modal-head h2 {
+    margin: 8px 0 12px;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 1.3;
+    color: var(--ink);
+    padding-right: 40px;
+  }
+  .modal-head .modal-tags {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .modal-summary {
+    padding: 14px 24px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .modal-summary::before {
+    content: 'AI summary · ';
+    font-family: 'Roboto', sans-serif;
+    font-style: normal;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+  }
+  .modal-body {
+    padding: 24px;
+    max-height: 55vh;
+    overflow-y: auto;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .modal-body::-webkit-scrollbar { width: 8px; }
+  .modal-body::-webkit-scrollbar-track { background: var(--panel-2); }
+  .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .modal-body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-color: rgba(111,39,64,0.3);
+    word-break: break-all;
+  }
+  .modal-body .empty {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+  .modal-actions {
+    display: flex; gap: 8px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--panel-2);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .modal-actions .btn-primary {
+    background: var(--accent); color: #ffffff;
+    border: none; border-radius: 4px;
+    padding: 8px 14px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .modal-actions .btn-primary:hover { background: #9e2339; text-decoration: none; }
+  .modal-actions .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-dim);
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .modal-actions .btn-ghost:hover { color: var(--ink); border-color: var(--accent); }
+  .modal-actions .meta-info {
+    margin-left: auto;
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    color: var(--ink-faint);
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .tag {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px; text-transform: lowercase;
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--border);
+    cursor: pointer; transition: all .12s;
+  }
+  .tag:hover { color: var(--ink); border-color: var(--accent); }
+  .tag.issue { color: #6f2740; border-color: #d0d1db; background: rgba(111,39,64,0.06); }
+  .tag.entity { color: #377f9d; border-color: #d0d1db; background: rgba(55,127,157,0.06); }
+  .lean-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 2px; vertical-align: middle;
+  }
+  .lean-dot.democrat { background: var(--dem); }
+  .lean-dot.republican { background: var(--rep); }
+  .lean-dot.independent { background: var(--ind); }
+  .lean-dot.unknown { background: var(--ink-faint); }
+
+  .state {
+    padding: 40px 20px; text-align: center; color: var(--ink-faint);
+    font-family: 'Roboto', sans-serif; font-size: 12px;
+  }
+
+  .active-filter {
+    background: var(--accent-2); color: #fff;
+    padding: 4px 10px; border-radius: 4px;
+    font-family: 'Roboto', sans-serif; font-size: 11px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .active-filter button {
+    background: transparent; border: none; color: #fff;
+    cursor: pointer; padding: 0; font-size: 14px; line-height: 1;
+  }
+
+  footer {
+    margin: 40px 32px 20px;
+    text-align: center; color: var(--ink-faint);
+    font-family: 'Roboto', sans-serif; font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="eyebrow">Political Email Intelligence</span>
+    <h1>Fundraising <em>Tracker</em></h1>
+    <span class="sub">Issues and named entities across political fundraising emails</span>
+  </div>
+  <div class="meta">
+    <div><span class="pulse"></span><span id="status">Live · auto-refresh 5m</span></div>
+    <div>Last update: <span id="lastUpdate">—</span></div>
+    <div>Source: <span id="source">demo data</span></div>
+  </div>
+</header>
+
+<main>
+
+  <section class="kpis" id="kpis">
+    <div class="kpi"><div class="label">Total Emails</div><div class="val" id="kpiTotal">—</div><div class="delta" id="kpiTotalSub">all time</div></div>
+    <div class="kpi"><div class="label">Last 7 Days</div><div class="val" id="kpi7">—</div><div class="delta" id="kpi7Sub">vs prior 7d</div></div>
+    <div class="kpi party-d"><div class="label">Democrat Share</div><div class="val" id="kpiDem">—</div><div class="delta" id="kpiDemSub">of current view</div></div>
+    <div class="kpi party-r"><div class="label">Republican Share</div><div class="val" id="kpiRep">—</div><div class="delta" id="kpiRepSub">of current view</div></div>
+  </section>
+
+  <section class="controls">
+    <input type="search" id="search" placeholder="Search subject, sender, summary…" />
+    <div class="pill-group" id="leanPills">
+      <span class="pill active" data-lean="all">All</span>
+      <span class="pill" data-lean="democrat">Dem</span>
+      <span class="pill" data-lean="republican">Rep</span>
+      <span class="pill" data-lean="independent">Ind</span>
+    </div>
+    <select id="rangeSel">
+      <option value="7">Last 7 days</option>
+      <option value="14" selected>Last 14 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="9999">All time</option>
+    </select>
+    <span id="activeFilters"></span>
+    <button class="btn" id="refreshBtn">Refresh</button>
+    <button class="btn ghost" id="exportBtn">Export CSV</button>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h3>Email Volume Over Time <span class="count" id="volCount">—</span></h3>
+      <div class="chart-wrap"><canvas id="volChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Top Issues <span class="count">click to filter</span></h3>
+      <div class="chart-wrap"><canvas id="issueChart"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h3>Top Named People <span class="count">click to filter</span></h3>
+      <div class="bar-list" id="peopleList"></div>
+    </div>
+    <div class="panel">
+      <h3>Top Named Orgs / Companies <span class="count">click to filter</span></h3>
+      <div class="bar-list" id="orgsList"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Top Senders <span class="count">by email volume in current view</span></h3>
+    <div class="bar-list" id="sendersList"></div>
+  </section>
+
+  <section class="panel">
+    <h3>Recent Emails <span class="count" id="feedCount">—</span></h3>
+    <div class="feed" id="feed"></div>
+  </section>
+
+</main>
+
+<!-- EMAIL VIEWER MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <button class="close" onclick="closeModal()" aria-label="Close">×</button>
+      <div class="from-line">
+        <span class="lean-dot" id="mLeanDot"></span>
+        <span class="sender-name" id="mSender"></span>
+        <span class="sender-email" id="mEmail"></span>
+      </div>
+      <div class="date-line" id="mDate"></div>
+      <h2 id="mSubject"></h2>
+      <div class="modal-tags" id="mTags"></div>
+    </div>
+    <div class="modal-summary" id="mSummary"></div>
+    <div class="modal-body" id="mBody"></div>
+    <div class="modal-actions">
+      <a class="btn-primary" id="mGmailLink" href="#" target="_blank" rel="noopener">Open in Gmail ↗</a>
+      <button class="btn-ghost" onclick="copyEmailText()">Copy Body</button>
+      <span class="meta-info" id="mMeta"></span>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// ============================================================
+// CONFIG — paste your published Google Sheet CSV URL.
+// File → Share → Publish to web → CSV → Emails tab.
+// Leave blank to use built-in demo data.
+// ============================================================
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCAvX--8kQVWcWsRSuJGMts91eZdMAyPaFsu4pialRTC3uZbAH5Jr7Ogzg0zGQMVnMi0mhScRZou9A/pub?gid=1439135562&single=true&output=csv";
+
+const REFRESH_MS = 5 * 60 * 1000;
+
+// ============================================================
+// DEMO DATA
+// ============================================================
+const DEMO_DATA = [
+  { received_at:"2026-04-26T13:22:00Z", from_name:"DSCC", from_email:"info@dscc.org", from_domain:"dscc.org", subject:"BREAKING: Trump just endorsed his most extreme nominee yet", party_lean:"democrat", sender_org:"DSCC", issues:"abortion, voting-rights, judiciary", entities_people:"Trump", entities_orgs:"", one_line_summary:"DSCC warns about Trump's latest judicial nominee and asks for donations.",
+    body_text:"Friend —\n\nWe just got news that Donald Trump has officially endorsed Judge Aileen Cannon for elevation to the federal appeals court — and we have to act fast.\n\nIf confirmed, Cannon would join a wave of Trump-appointed judges who have systematically dismantled abortion rights, gutted voting protections, and rubber-stamped his most extreme policies.\n\nThis is exactly why every single Senate seat matters. The Senate confirms judges. Period.\n\nSenate Democrats need 100,000 grassroots donors before midnight tonight to fund our emergency response. Every contribution will be 5X-MATCHED by a generous donor.\n\nWILL YOU CHIP IN $5 RIGHT NOW?\n→ https://act.dscc.org/match/5x-cannon\n→ https://act.dscc.org/match/5x-cannon?amount=15\n→ https://act.dscc.org/match/5x-cannon?amount=25\n\nWe cannot — we MUST not — let Trump pack another court with extremists.\n\nThank you for everything you do.\n\n— The DSCC Team\n\nP.S. The deadline is midnight. After that, the 5X match disappears. Please don't wait.\n\n----\nPaid for by DSCC, www.dscc.org, not authorized by any candidate or candidate's committee.\nDemocratic Senatorial Campaign Committee, 120 Maryland Ave NE, Washington, DC 20002\n\nUnsubscribe: https://act.dscc.org/unsubscribe",
+    gmail_url:"https://mail.google.com/mail/u/0/#inbox/demo1" },
+  { received_at:"2026-04-26T11:05:00Z", from_name:"Trump National Committee", from_email:"team@donaldtrump.com", from_domain:"donaldtrump.com", subject:"They INDICTED Elon — we won't be silenced", party_lean:"republican", sender_org:"Trump National Committee", issues:"free-speech, big-tech", entities_people:"Trump, Elon Musk", entities_orgs:"X, DOJ", one_line_summary:"Trump committee frames legal action against Elon Musk and X as censorship.",
+    body_text:"Patriot —\n\nThe Radical Left is now coming for ELON MUSK.\n\nLast night, the DOJ filed charges against Elon for the unforgivable crime of allowing FREE SPEECH on X. They want to silence him the same way they tried to silence ME.\n\nThis is no longer a country where you can speak your mind. Unless you stop them, NO ONE is safe.\n\nElon stood with us. Now we stand with him.\n\nPresident Trump is calling on every TRUE patriot to step up RIGHT NOW. Will you contribute $35 to defend free speech in America?\n\nCONTRIBUTE $35 → https://secure.donaldtrump.com/freespeech-35\nCONTRIBUTE $50 → https://secure.donaldtrump.com/freespeech-50\nCONTRIBUTE $100 → https://secure.donaldtrump.com/freespeech-100\nCONTRIBUTE $250 → https://secure.donaldtrump.com/freespeech-250\n\n2X MATCH ACTIVE — your gift is doubled.\n\nThey indicted Elon. They indicted me. They will come for YOU next if we let them.\n\nThank you, patriot.\n\n— The Trump National Committee\n\n---\nPaid for by Trump National Committee. Not authorized by any candidate or candidate's committee.",
+    gmail_url:"https://mail.google.com/mail/u/0/#inbox/demo2" },
+  { received_at:"2026-04-26T08:40:00Z", from_name:"Bernie Sanders", from_email:"info@berniesanders.com", from_domain:"berniesanders.com", subject:"Palantir is profiting off our pain — we say enough", party_lean:"democrat", sender_org:"Friends of Bernie Sanders", issues:"healthcare, surveillance, economy", entities_people:"Bernie Sanders", entities_orgs:"Palantir, UnitedHealth", one_line_summary:"Sanders campaign attacks Palantir and big healthcare for profiting off Americans.",
+    body_text:"Brothers and sisters —\n\nLet me be very clear about what is happening in this country.\n\nWhile working families struggle to afford insulin, while seniors choose between food and prescriptions, while millions go bankrupt from medical bills — Palantir, UnitedHealth, and the rest of the corporate elite are reporting RECORD profits.\n\nPalantir, a surveillance company that built its fortune helping the government track Americans, just signed a $200 million contract to mine our healthcare data.\n\nThis is not capitalism. This is oligarchy.\n\nI am running this campaign on small-dollar donations from working people. Not corporate PACs. Not billionaires. YOU.\n\nWill you chip in $3 today to help us fight back?\n\n→ https://berniesanders.com/donate/3\n→ https://berniesanders.com/donate/10\n→ https://berniesanders.com/donate/27\n\nWe are building a movement to take on the most powerful interests in America. We will not be intimidated. We will not be bought.\n\nIn solidarity,\nBernie\n\n---\nPaid for by Friends of Bernie Sanders.",
+    gmail_url:"https://mail.google.com/mail/u/0/#inbox/demo3" },
+  { received_at:"2026-04-25T19:18:00Z", from_name:"NRSC", from_email:"team@nrsc.org", from_domain:"nrsc.org", subject:"Border crisis update — please read", party_lean:"republican", sender_org:"NRSC", issues:"immigration, border-security, crime", entities_people:"Biden", entities_orgs:"", one_line_summary:"NRSC frames border policy as crisis and pushes deadline donations." },
+  { received_at:"2026-04-25T14:00:00Z", from_name:"Planned Parenthood Action", from_email:"action@ppfa.org", from_domain:"ppfa.org", subject:"Sign the petition: protect IVF nationwide", party_lean:"democrat", sender_org:"Planned Parenthood Action Fund", issues:"abortion, healthcare, women", entities_people:"", entities_orgs:"", one_line_summary:"PPAF asks supporters to sign petition protecting IVF access." },
+  { received_at:"2026-04-25T09:30:00Z", from_name:"Heritage Action", from_email:"alerts@heritageaction.com", from_domain:"heritageaction.com", subject:"Big Tech is rigging the next election", party_lean:"republican", sender_org:"Heritage Action", issues:"big-tech, voting-rights, free-speech", entities_people:"", entities_orgs:"Google, Meta, X", one_line_summary:"Heritage Action raises alarms about Big Tech election influence." },
+  { received_at:"2026-04-24T22:11:00Z", from_name:"AOC", from_email:"team@ocasio2026.com", from_domain:"ocasio2026.com", subject:"They're coming for Medicare — I need you", party_lean:"democrat", sender_org:"Alexandria Ocasio-Cortez for Congress", issues:"healthcare, economy", entities_people:"Trump, AOC", entities_orgs:"", one_line_summary:"AOC warns of cuts to Medicare and asks for donations." },
+  { received_at:"2026-04-24T17:44:00Z", from_name:"Club for Growth", from_email:"team@clubforgrowth.org", from_domain:"clubforgrowth.org", subject:"Tax hikes coming — survey inside", party_lean:"republican", sender_org:"Club for Growth", issues:"economy, taxes", entities_people:"", entities_orgs:"", one_line_summary:"Club for Growth pitches a survey on tax policy with a donation ask." },
+  { received_at:"2026-04-24T12:02:00Z", from_name:"Everytown for Gun Safety", from_email:"info@everytown.org", from_domain:"everytown.org", subject:"Another shooting. Another silence from Congress.", party_lean:"democrat", sender_org:"Everytown for Gun Safety", issues:"guns", entities_people:"", entities_orgs:"NRA", one_line_summary:"Everytown frames recent shooting as Congressional inaction." },
+  { received_at:"2026-04-23T20:20:00Z", from_name:"Ron DeSantis", from_email:"team@rondesantis.com", from_domain:"rondesantis.com", subject:"The woke mob came for me — will you stand with me?", party_lean:"republican", sender_org:"DeSantis Committee", issues:"culture-war, education", entities_people:"DeSantis", entities_orgs:"Disney", one_line_summary:"DeSantis frames a culture-war fight against Disney." },
+  { received_at:"2026-04-23T15:09:00Z", from_name:"Sierra Club", from_email:"action@sierraclub.org", from_domain:"sierraclub.org", subject:"Big Oil bought another senator", party_lean:"democrat", sender_org:"Sierra Club", issues:"climate, energy", entities_people:"", entities_orgs:"ExxonMobil, Chevron", one_line_summary:"Sierra Club calls out fossil fuel lobbying." },
+  { received_at:"2026-04-23T10:55:00Z", from_name:"Trump National Committee", from_email:"team@donaldtrump.com", from_domain:"donaldtrump.com", subject:"5X MATCH — last chance, patriot", party_lean:"republican", sender_org:"Trump National Committee", issues:"economy, immigration", entities_people:"Trump, Biden", entities_orgs:"", one_line_summary:"Trump committee runs an urgent matched donation ask." },
+  { received_at:"2026-04-22T18:30:00Z", from_name:"Justice Democrats", from_email:"team@justicedemocrats.com", from_domain:"justicedemocrats.com", subject:"Corporate Dems are blocking us — we need grassroots", party_lean:"democrat", sender_org:"Justice Democrats", issues:"economy, healthcare", entities_people:"", entities_orgs:"", one_line_summary:"Justice Democrats frames intra-party fight." },
+  { received_at:"2026-04-22T11:14:00Z", from_name:"FreedomWorks", from_email:"team@freedomworks.org", from_domain:"freedomworks.org", subject:"They're tracking your every move (Palantir, Amazon, more)", party_lean:"republican", sender_org:"FreedomWorks", issues:"surveillance, big-tech, free-speech", entities_people:"", entities_orgs:"Palantir, Amazon, Google", one_line_summary:"FreedomWorks raises surveillance concerns naming Palantir, Amazon, and Google." },
+  { received_at:"2026-04-21T16:00:00Z", from_name:"DCCC", from_email:"info@dccc.org", from_domain:"dccc.org", subject:"FEC Deadline: 11:59pm tonight", party_lean:"democrat", sender_org:"DCCC", issues:"voting-rights, abortion", entities_people:"Trump", entities_orgs:"", one_line_summary:"DCCC pushes FEC deadline donations." },
+  { received_at:"2026-04-21T09:42:00Z", from_name:"Mike Johnson", from_email:"team@mikejohnson.com", from_domain:"mikejohnson.com", subject:"Speaker Johnson: please answer this poll", party_lean:"republican", sender_org:"Mike Johnson Committee", issues:"economy, immigration, abortion", entities_people:"Mike Johnson, Trump", entities_orgs:"", one_line_summary:"Speaker Johnson sends a survey-style fundraising email." },
+  { received_at:"2026-04-20T14:15:00Z", from_name:"MoveOn", from_email:"action@moveon.org", from_domain:"moveon.org", subject:"Sign now: stop the Project 2025 agenda", party_lean:"democrat", sender_org:"MoveOn", issues:"voting-rights, abortion, judiciary", entities_people:"Trump", entities_orgs:"Heritage Foundation", one_line_summary:"MoveOn rallies opposition to Project 2025." },
+  { received_at:"2026-04-20T08:00:00Z", from_name:"Turning Point USA", from_email:"team@tpusa.com", from_domain:"tpusa.com", subject:"Trump rally tomorrow — RSVP now", party_lean:"republican", sender_org:"Turning Point USA", issues:"culture-war", entities_people:"Trump", entities_orgs:"", one_line_summary:"TPUSA promotes a Trump rally with RSVP and donation prompts." },
+  { received_at:"2026-04-19T15:30:00Z", from_name:"Warren Democrats", from_email:"info@elizabethwarren.com", from_domain:"elizabethwarren.com", subject:"Big Pharma's stranglehold ends with us", party_lean:"democrat", sender_org:"Warren for Senate", issues:"healthcare, economy", entities_people:"Elizabeth Warren", entities_orgs:"Pfizer, Moderna", one_line_summary:"Warren campaign targets Big Pharma pricing." },
+  { received_at:"2026-04-19T10:11:00Z", from_name:"NRA-PVF", from_email:"info@nrapvf.org", from_domain:"nrapvf.org", subject:"Your 2A rights are on the line", party_lean:"republican", sender_org:"NRA Political Victory Fund", issues:"guns, judiciary", entities_people:"Biden", entities_orgs:"", one_line_summary:"NRA-PVF rallies supporters around Second Amendment fights." }
+];
+
+// STATE
+let allRows = [];
+let filtered = [];
+let charts = {};
+let currentLean = "all";
+let currentDays = 14;
+let activeTagFilter = null;
+
+// LOAD
+async function loadData() {
+  document.getElementById("status").textContent = "Loading…";
+  if (SHEET_CSV_URL) {
+    try {
+      const r = await fetch(SHEET_CSV_URL);
+      const text = await r.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      allRows = parsed.data.map(normalizeRow);
+      document.getElementById("source").textContent = "Google Sheet · live";
+    } catch (e) {
+      console.error("Sheet fetch failed, falling back to demo:", e);
+      allRows = DEMO_DATA.map(normalizeRow);
+      document.getElementById("source").textContent = "demo data (fetch failed)";
+    }
+  } else {
+    allRows = DEMO_DATA.map(normalizeRow);
+    document.getElementById("source").textContent = "demo data";
+  }
+  document.getElementById("lastUpdate").textContent = new Date().toLocaleString();
+  document.getElementById("status").textContent = "Live · auto-refresh 5m";
+  applyFilters();
+}
+
+function normalizeRow(r) {
+  return {
+    message_id: r.message_id || "",
+    received_at: r.received_at || r.processed_at || "",
+    from_name: r.from_name || "",
+    from_email: r.from_email || "",
+    from_domain: r.from_domain || "",
+    subject: r.subject || "",
+    party_lean: (r.party_lean || "unknown").toLowerCase(),
+    sender_org: r.sender_org || r.from_name || r.from_domain,
+    issues: splitTags(r.issues),
+    entities_people: canonPersonList(splitTags(r.entities_people)),
+    entities_orgs: filterOrgs(splitTags(r.entities_orgs)),
+    one_line_summary: r.one_line_summary || "",
+    body_text: r.body_text || r.body_excerpt || "",
+    gmail_url: r.gmail_url || ""
+  };
+}
+function splitTags(s) {
+  if (!s) return [];
+  if (Array.isArray(s)) return s;
+  return String(s).split(/[,;]/).map(x => x.trim()).filter(Boolean);
+}
+
+// Canonicalize person names — merge Trump variants, etc.
+const PERSON_ALIASES = {
+  'donald trump': 'Trump',
+  'president trump': 'Trump',
+  'donald j trump': 'Trump',
+  'donald j. trump': 'Trump',
+  'djt': 'Trump',
+  'pres trump': 'Trump',
+  'pres. trump': 'Trump',
+  'former president trump': 'Trump',
+  '45': 'Trump',
+  'joe biden': 'Biden',
+  'president biden': 'Biden',
+  'joseph biden': 'Biden',
+  'kamala harris': 'Harris',
+  'vp harris': 'Harris',
+  'alexandria ocasio-cortez': 'AOC',
+  'aoc': 'AOC',
+  'alexandria ocasio cortez': 'AOC',
+  'bernie sanders': 'Bernie Sanders',
+  'sen. sanders': 'Bernie Sanders',
+  'elizabeth warren': 'Warren',
+  'sen. warren': 'Warren',
+  'elon musk': 'Elon Musk',
+  'elon': 'Elon Musk',
+  'musk': 'Elon Musk',
+};
+function canonPerson(name) {
+  if (!name) return name;
+  const key = String(name).trim().toLowerCase();
+  return PERSON_ALIASES[key] || name.trim();
+}
+
+// Orgs to exclude from displays — they're noise (e.g. ActBlue is the universal donate platform)
+const EXCLUDED_ORGS = new Set([
+  'actblue',
+  'act blue',
+  'winred',
+  'win red',
+]);
+function filterOrgs(orgs) {
+  return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));
+}
+
+// Dedupe + canonicalize a list of names (for entities_people)
+function canonPersonList(list) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const c = canonPerson(raw);
+    const k = c.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(c); }
+  }
+  return out;
+}
+
+// FILTER
+function applyFilters() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const cutoff = Date.now() - currentDays * 86400000;
+  filtered = allRows.filter(r => {
+    const t = new Date(r.received_at).getTime();
+    if (!isNaN(t) && t < cutoff) return false;
+    if (currentLean !== "all" && r.party_lean !== currentLean) return false;
+    if (q) {
+      const hay = (r.subject + " " + r.from_name + " " + r.from_email + " " + r.one_line_summary + " " + r.body_text + " " + r.issues.join(" ") + " " + r.entities_people.join(" ") + " " + r.entities_orgs.join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (activeTagFilter) {
+      const list = activeTagFilter.type === 'issue' ? r.issues
+                 : activeTagFilter.type === 'person' ? r.entities_people
+                 : r.entities_orgs;
+      if (!list.map(x => x.toLowerCase()).includes(activeTagFilter.value.toLowerCase())) return false;
+    }
+    return true;
+  });
+  renderActiveFilter();
+  render();
+}
+
+function renderActiveFilter() {
+  const el = document.getElementById('activeFilters');
+  if (!activeTagFilter) { el.innerHTML = ''; return; }
+  el.innerHTML = `<span class="active-filter">${escapeHtml(activeTagFilter.type)}: ${escapeHtml(activeTagFilter.value)}<button onclick="clearTagFilter()">×</button></span>`;
+}
+function clearTagFilter() { activeTagFilter = null; applyFilters(); }
+function setTagFilter(type, value) {
+  if (activeTagFilter && activeTagFilter.type === type && activeTagFilter.value === value) {
+    activeTagFilter = null;
+  } else {
+    activeTagFilter = { type, value };
+  }
+  applyFilters();
+}
+
+// RENDER
+function render() {
+  renderKPIs();
+  renderVolumeChart();
+  renderIssueChart();
+  renderPeople();
+  renderOrgs();
+  renderSenders();
+  renderFeed();
+}
+
+function renderKPIs() {
+  const total = allRows.length;
+  const last7Cut = Date.now() - 7 * 86400000;
+  const prev7Cut = Date.now() - 14 * 86400000;
+  const last7 = allRows.filter(r => new Date(r.received_at).getTime() >= last7Cut).length;
+  const prev7 = allRows.filter(r => {
+    const t = new Date(r.received_at).getTime();
+    return t >= prev7Cut && t < last7Cut;
+  }).length;
+
+  const dem = filtered.filter(r => r.party_lean === "democrat").length;
+  const rep = filtered.filter(r => r.party_lean === "republican").length;
+  const fTot = filtered.length || 1;
+
+  document.getElementById("kpiTotal").textContent = total;
+  document.getElementById("kpiTotalSub").textContent = `${filtered.length} in current view`;
+  document.getElementById("kpi7").textContent = last7;
+  const delta = prev7 ? Math.round(((last7 - prev7) / prev7) * 100) : 0;
+  document.getElementById("kpi7Sub").textContent = (delta >= 0 ? "+" : "") + delta + "% vs prior 7d";
+  document.getElementById("kpiDem").textContent = Math.round((dem / fTot) * 100) + "%";
+  document.getElementById("kpiDemSub").textContent = `${dem} emails`;
+  document.getElementById("kpiRep").textContent = Math.round((rep / fTot) * 100) + "%";
+  document.getElementById("kpiRepSub").textContent = `${rep} emails`;
+
+  document.getElementById("volCount").textContent = filtered.length + " emails";
+  document.getElementById("feedCount").textContent = filtered.length + " emails";
+}
+
+function renderVolumeChart() {
+  const ctx = document.getElementById("volChart");
+  const days = currentDays === 9999 ? 30 : Math.min(currentDays, 30);
+  const labels = [];
+  const buckets = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    labels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+    buckets[key] = { democrat: 0, republican: 0, independent: 0, unknown: 0 };
+  }
+  filtered.forEach(r => {
+    const key = (r.received_at || "").slice(0, 10);
+    if (buckets[key]) {
+      buckets[key][r.party_lean] = (buckets[key][r.party_lean] || 0) + 1;
+    }
+  });
+  const dem = Object.values(buckets).map(b => b.democrat);
+  const rep = Object.values(buckets).map(b => b.republican);
+  const oth = Object.values(buckets).map(b => (b.independent || 0) + (b.unknown || 0));
+
+  if (charts.vol) charts.vol.destroy();
+  charts.vol = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Democrat', data: dem, backgroundColor: '#377f9d', stack: 's' },
+        { label: 'Republican', data: rep, backgroundColor: '#9e2339', stack: 's' },
+        { label: 'Other/Unknown', data: oth, backgroundColor: '#888b95', stack: 's' }
+      ]
+    },
+    options: chartOpts({ stacked: true, yLabel: 'Number of Emails' })
+  });
+}
+
+function renderIssueChart() {
+  const counts = {};
+  filtered.forEach(r => r.issues.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const labels = sorted.map(x => x[0]);
+  const data = sorted.map(x => x[1]);
+
+  const ctx = document.getElementById("issueChart");
+  if (charts.issue) charts.issue.destroy();
+  charts.issue = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
+    options: {
+      ...chartOpts({}),
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: tooltipStyle() },
+      onClick: (evt, elements) => {
+        if (elements.length) {
+          const idx = elements[0].index;
+          setTagFilter('issue', labels[idx]);
+        }
+      },
+      onHover: (evt, elements) => {
+        if (evt.native && evt.native.target) {
+          evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        }
+      }
+    }
+  });
+}
+
+function renderPeople() {
+  const counts = {};
+  filtered.forEach(r => r.entities_people.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  renderClickableBarList("peopleList", counts, "person");
+}
+function renderOrgs() {
+  const counts = {};
+  filtered.forEach(r => r.entities_orgs.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  renderClickableBarList("orgsList", counts, "org");
+}
+function renderClickableBarList(elId, counts, tagType) {
+  const el = document.getElementById(elId);
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  if (!sorted.length) { el.innerHTML = '<div class="state">No data in current view.</div>'; return; }
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([name, n]) => `
+    <div class="bar-row" style="cursor:pointer" onclick='setTagFilter(${JSON.stringify(tagType)}, ${JSON.stringify(name)})'>
+      <div class="label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+      <div class="bar"><span style="width:${(n/max*100).toFixed(1)}%"></span></div>
+      <div class="num">${n}</div>
+    </div>
+  `).join("");
+}
+
+function renderSenders() {
+  const counts = {};
+  const leans = {};
+  filtered.forEach(r => {
+    const k = r.sender_org || r.from_name || r.from_domain;
+    counts[k] = (counts[k] || 0) + 1;
+    leans[k] = r.party_lean;
+  });
+  const list = document.getElementById("sendersList");
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  if (!sorted.length) { list.innerHTML = '<div class="state">No emails in current view.</div>'; return; }
+  const max = sorted[0][1];
+  list.innerHTML = sorted.map(([name, n]) => `
+    <div class="bar-row ${leans[name] === 'democrat' ? 'dem' : leans[name] === 'republican' ? 'rep' : ''}">
+      <div class="label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+      <div class="bar"><span style="width:${(n/max*100).toFixed(1)}%"></span></div>
+      <div class="num">${n}</div>
+    </div>
+  `).join("");
+}
+
+function renderFeed() {
+  const feed = document.getElementById("feed");
+  const sorted = filtered.slice().sort((a, b) => new Date(b.received_at) - new Date(a.received_at)).slice(0, 30);
+  if (!sorted.length) { feed.innerHTML = '<div class="state">No emails match these filters.</div>'; return; }
+  // store sorted set on window so click handlers can find the row by index
+  window._feedRows = sorted;
+  feed.innerHTML = sorted.map((r, i) => {
+    const when = new Date(r.received_at);
+    const whenStr = isNaN(when) ? "" : when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const tags = [
+      ...r.issues.map(t => `<span class="tag issue" onclick='event.stopPropagation();setTagFilter("issue", ${JSON.stringify(t)})'>${escapeHtml(t)}</span>`),
+      ...r.entities_people.map(t => `<span class="tag entity" onclick='event.stopPropagation();setTagFilter("person", ${JSON.stringify(t)})'>@${escapeHtml(t)}</span>`),
+      ...r.entities_orgs.map(t => `<span class="tag entity" onclick='event.stopPropagation();setTagFilter("org", ${JSON.stringify(t)})'>${escapeHtml(t)}</span>`)
+    ].join("");
+    return `
+      <div class="feed-item" onclick="openModal(${i})">
+        <div class="row1">
+          <span class="lean-dot ${r.party_lean}"></span>
+          <span class="sender">${escapeHtml(r.sender_org || r.from_name || r.from_domain)}</span>
+          <span class="when">${whenStr}</span>
+          <span class="open-hint">Open ↗</span>
+        </div>
+        <div class="subj">${escapeHtml(r.subject)}</div>
+        ${r.one_line_summary ? `<div class="summary">${escapeHtml(r.one_line_summary)}</div>` : ''}
+        <div class="tags">${tags}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function chartOpts({ stacked = false, yLabel = '' } = {}) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: {
+        stacked,
+        ticks: { color: '#888b95', font: { family: 'Roboto', size: 10 } },
+        grid: { color: 'rgba(31, 39, 64, 0.05)' }
+      },
+      y: {
+        stacked,
+        beginAtZero: true,
+        ticks: {
+          color: '#888b95',
+          font: { family: 'Roboto', size: 10 },
+          stepSize: 1,                       // integer ticks only
+          precision: 0,
+          callback: function(value) {
+            if (Number.isInteger(value)) return value;
+            return null;                      // hide non-integer labels
+          }
+        },
+        grid: { color: 'rgba(31, 39, 64, 0.05)' },
+        title: yLabel ? {
+          display: true,
+          text: yLabel,
+          color: '#6f2740',
+          font: { family: 'Roboto', size: 11, weight: '700' }
+        } : { display: false }
+      }
+    },
+    plugins: {
+      legend: { labels: { color: '#1a1a1f', font: { family: 'Roboto', size: 11, weight: '500' } } },
+      tooltip: tooltipStyle()
+    }
+  };
+}
+function tooltipStyle() {
+  return {
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d1db',
+    borderWidth: 1,
+    titleColor: '#6f2740',
+    bodyColor: '#1a1a1f',
+    titleFont: { family: 'Roboto', weight: '700', size: 12 },
+    bodyFont: { family: 'Roboto', size: 11 },
+    padding: 10,
+    cornerRadius: 4,
+    displayColors: true
+  };
+}
+
+// ============================================================
+// EMAIL MODAL
+// ============================================================
+let currentModalEmail = null;
+
+function openModal(feedIndex) {
+  const r = window._feedRows && window._feedRows[feedIndex];
+  if (!r) return;
+  currentModalEmail = r;
+
+  document.getElementById("mLeanDot").className = "lean-dot " + r.party_lean;
+  document.getElementById("mSender").textContent = r.sender_org || r.from_name || r.from_domain;
+  document.getElementById("mEmail").textContent = r.from_email ? "<" + r.from_email + ">" : "";
+  const when = new Date(r.received_at);
+  document.getElementById("mDate").textContent = isNaN(when) ? "" : when.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  document.getElementById("mSubject").textContent = r.subject || "(no subject)";
+
+  // Tags
+  const tagsHtml = [
+    ...r.issues.map(t => `<span class="tag issue">${escapeHtml(t)}</span>`),
+    ...r.entities_people.map(t => `<span class="tag entity">@${escapeHtml(t)}</span>`),
+    ...r.entities_orgs.map(t => `<span class="tag entity">${escapeHtml(t)}</span>`)
+  ].join("");
+  document.getElementById("mTags").innerHTML = tagsHtml || '<span style="color:var(--ink-faint);font-size:11px;font-family:monospace;">no tags extracted</span>';
+
+  // Summary
+  document.getElementById("mSummary").textContent = r.one_line_summary || "(no summary)";
+
+  // Body — autolink URLs, escape everything else
+  const bodyEl = document.getElementById("mBody");
+  if (r.body_text && r.body_text.trim()) {
+    bodyEl.innerHTML = autolinkText(r.body_text);
+    bodyEl.scrollTop = 0;
+  } else {
+    bodyEl.innerHTML = '<div class="empty">No body content stored. Click "Open in Gmail" to view the original email.</div>';
+  }
+
+  // Gmail link
+  const gmailA = document.getElementById("mGmailLink");
+  if (r.gmail_url) {
+    gmailA.href = r.gmail_url;
+    gmailA.style.display = "inline-flex";
+  } else {
+    gmailA.style.display = "none";
+  }
+
+  // Meta
+  document.getElementById("mMeta").textContent = (r.body_text ? r.body_text.length.toLocaleString() + " chars" : "");
+
+  document.getElementById("modalBackdrop").classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").classList.remove("show");
+  document.body.style.overflow = "";
+  currentModalEmail = null;
+}
+
+function copyEmailText() {
+  if (!currentModalEmail) return;
+  const text = `From: ${currentModalEmail.sender_org || currentModalEmail.from_name} <${currentModalEmail.from_email}>\nDate: ${currentModalEmail.received_at}\nSubject: ${currentModalEmail.subject}\n\n${currentModalEmail.body_text || ''}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const old = btn.textContent;
+    btn.textContent = "Copied ✓";
+    setTimeout(() => { btn.textContent = old; }, 1500);
+  });
+}
+
+// Convert raw text with URLs into safe HTML with clickable links
+function autolinkText(text) {
+  // Escape first, then replace URL patterns with anchors.
+  // The escape ensures no injection; the URL regex runs on escaped text
+  // (which still contains ://, /, ., ?, =, & — all safe characters in entities).
+  const escaped = escapeHtml(text);
+  // Match http(s) URLs — stop at whitespace, quotes, or angle brackets.
+  return escaped.replace(/(https?:\/\/[^\s<>"']+)/g, (url) => {
+    // Trim trailing punctuation that's likely sentence-ending, not part of URL
+    let trimmed = url;
+    let trail = '';
+    while (/[.,;:!?)\]]$/.test(trimmed)) {
+      trail = trimmed.slice(-1) + trail;
+      trimmed = trimmed.slice(0, -1);
+    }
+    return `<a href="${trimmed}" target="_blank" rel="noopener noreferrer">${trimmed}</a>${trail}`;
+  });
+}
+
+// Close on Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+});
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function exportCSV() {
+  const cols = ["received_at","from_name","from_email","sender_org","party_lean","subject","issues","entities_people","entities_orgs","one_line_summary"];
+  const rows = [cols.join(",")].concat(filtered.map(r => cols.map(c => {
+    const v = Array.isArray(r[c]) ? r[c].join("; ") : (r[c] ?? "");
+    return `"${String(v).replace(/"/g, '""')}"`;
+  }).join(",")));
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "fundraising_emails_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("search").addEventListener("input", () => applyFilters());
+document.getElementById("rangeSel").addEventListener("change", e => { currentDays = Number(e.target.value); applyFilters(); });
+document.getElementById("refreshBtn").addEventListener("click", loadData);
+document.getElementById("exportBtn").addEventListener("click", exportCSV);
+document.querySelectorAll("#leanPills .pill").forEach(p => {
+  p.addEventListener("click", () => {
+    document.querySelectorAll("#leanPills .pill").forEach(x => x.classList.remove("active"));
+    p.classList.add("active");
+    currentLean = p.dataset.lean;
+    applyFilters();
+  });
+});
+
+loadData();
+setInterval(loadData, REFRESH_MS);
+</script>
+</body>
+</html>

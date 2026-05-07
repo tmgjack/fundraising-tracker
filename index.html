@@ -774,6 +774,15 @@
 
   <section class="controls">
     <input type="search" id="search" placeholder="Search subject, sender, summary…" />
+    <div class="pill-group" id="officePills">
+      <span class="pill active" data-office="all">All Offices</span>
+      <span class="pill" data-office="house">House</span>
+      <span class="pill" data-office="senate">Senate</span>
+      <span class="pill" data-office="governor">Governor</span>
+      <span class="pill" data-office="presidential">Pres</span>
+      <span class="pill" data-office="pac">PAC</span>
+      <span class="pill" data-office="other">Other</span>
+    </div>
     <div class="pill-group" id="leanPills">
       <span class="pill active" data-lean="all">All</span>
       <span class="pill" data-lean="democrat">Dem</span>
@@ -1043,6 +1052,10 @@ function applyFilters() {
     const t = new Date(r.received_at).getTime();
     if (!isNaN(t) && t < cutoff) return false;
     if (currentLean !== "all" && r.party_lean !== currentLean) return false;
+    if (currentOfficeFilter !== "all") {
+      const c = classifySender(r);
+      if (c.office !== currentOfficeFilter) return false;
+    }
     if (q) {
       const hay = (r.subject + " " + r.from_name + " " + r.from_email + " " + r.one_line_summary + " " + r.body_text + " " + r.issues.join(" ") + " " + r.entities_people.join(" ") + " " + r.entities_orgs.join(" ")).toLowerCase();
       if (!hay.includes(q)) return false;
@@ -1401,9 +1414,30 @@ let currentOfficeFilter = 'all';
 let selectedState = null;
 
 function renderOfficeMix() {
-  // Count emails by office type using the same classifier as geography
+  // Count emails by office across the date/lean/search-filtered set, but IGNORING
+  // the office filter itself — so all categories always show their true sizes.
+  // This way you can see how many Senate emails exist before clicking Senate.
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const cutoff = Date.now() - currentDays * 86400000;
+  const baseRows = allRows.filter(r => {
+    const t = new Date(r.received_at).getTime();
+    if (!isNaN(t) && t < cutoff) return false;
+    if (currentLean !== "all" && r.party_lean !== currentLean) return false;
+    if (q) {
+      const hay = (r.subject + " " + r.from_name + " " + r.from_email + " " + r.one_line_summary + " " + r.body_text + " " + r.issues.join(" ") + " " + r.entities_people.join(" ") + " " + r.entities_orgs.join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (activeTagFilter) {
+      const list = activeTagFilter.type === 'issue' ? r.issues
+                 : activeTagFilter.type === 'person' ? r.entities_people
+                 : r.entities_orgs;
+      if (!list.map(x => x.toLowerCase()).includes(activeTagFilter.value.toLowerCase())) return false;
+    }
+    return true;
+  });
+
   const buckets = { house: 0, senate: 0, governor: 0, presidential: 0, pac: 0, other: 0 };
-  filtered.forEach(r => {
+  baseRows.forEach(r => {
     const c = classifySender(r);
     const off = c.office || 'other';
     if (buckets.hasOwnProperty(off)) buckets[off]++;
@@ -1423,9 +1457,6 @@ function renderOfficeMix() {
     { key: 'presidential', label: 'Presidential',  count: buckets.presidential },
     { key: 'pac',          label: 'PAC',           count: buckets.pac },
   ];
-  // If "Other" is non-trivial, swap it in for one of the cards.
-  // We always show 6 cards; if Other has data, replace whichever has lowest count among
-  // governor/presidential/pac with Other. Simpler: just show All + 5 office types and add Other if it exists.
   if (buckets.other > 0) {
     order.push({ key: 'other', label: 'Other', count: buckets.other });
   }
@@ -1448,18 +1479,9 @@ function renderOfficeMix() {
   const el = document.getElementById('officeCards');
   el.innerHTML = html;
 
-  // Wire clicks: toggle the office filter (same state used by geography tabs)
+  // Wire clicks: toggle the office filter (uses the unified setter)
   el.querySelectorAll('.office-card').forEach(card => {
-    card.addEventListener('click', () => {
-      currentOfficeFilter = card.dataset.office;
-      selectedState = null;
-      // Sync the geography tab UI
-      document.querySelectorAll('#officeTabs .office-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.office === currentOfficeFilter);
-      });
-      renderOfficeMix();
-      renderGeography();
-    });
+    card.addEventListener('click', () => setOfficeFilter(card.dataset.office));
   });
 }
 
@@ -1931,16 +1953,25 @@ document.querySelectorAll("#leanPills .pill").forEach(p => {
   });
 });
 
-// Office tabs in the Geography panel
+// Unified setter so the top pills, geography tabs, and office cards all stay in sync
+function setOfficeFilter(office) {
+  currentOfficeFilter = office;
+  selectedState = null;
+  document.querySelectorAll("#officePills .pill").forEach(x =>
+    x.classList.toggle("active", x.dataset.office === office));
+  document.querySelectorAll("#officeTabs .office-tab").forEach(x =>
+    x.classList.toggle("active", x.dataset.office === office));
+  applyFilters();   // re-runs the global filter and triggers a full re-render
+}
+
+// Top-level office pills (control bar)
+document.querySelectorAll("#officePills .pill").forEach(p => {
+  p.addEventListener("click", () => setOfficeFilter(p.dataset.office));
+});
+
+// Office tabs inside Geography panel — keep in sync with the top pills
 document.querySelectorAll("#officeTabs .office-tab").forEach(t => {
-  t.addEventListener("click", () => {
-    document.querySelectorAll("#officeTabs .office-tab").forEach(x => x.classList.remove("active"));
-    t.classList.add("active");
-    currentOfficeFilter = t.dataset.office;
-    selectedState = null;          // clear selection when switching tabs
-    renderOfficeMix();             // re-render so the matching card highlights
-    renderGeography();
-  });
+  t.addEventListener("click", () => setOfficeFilter(t.dataset.office));
 });
 
 loadData();

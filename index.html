@@ -209,6 +209,78 @@
   .bar-row.dem .bar > span { background: linear-gradient(90deg, var(--dem), #97c0d6); }
   .bar-row.rep .bar > span { background: linear-gradient(90deg, var(--rep), #c14d62); }
 
+  /* OFFICE MIX */
+  .office-cards {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 1100px) {
+    .office-cards { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .office-cards { grid-template-columns: repeat(2, 1fr); }
+  }
+  .office-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    transition: all .12s;
+    position: relative;
+    overflow: hidden;
+  }
+  .office-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .office-card.active {
+    border-color: var(--accent);
+    background: rgba(111,39,64,0.04);
+  }
+  .office-card.active::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+  .office-card .office-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-dim);
+  }
+  .office-card .office-num {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 900;
+    font-size: 32px;
+    line-height: 1.1;
+    margin-top: 4px;
+    color: var(--accent);
+  }
+  .office-card .office-pct {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 2px;
+  }
+  .office-card .office-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .office-card .office-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width .2s;
+  }
+
   /* GEOGRAPHY */
   .office-tabs {
     display: flex; flex-wrap: wrap; gap: 4px;
@@ -753,6 +825,11 @@
   </section>
 
   <section class="panel">
+    <h3>Office Mix <span class="count" id="officeMixCount">—</span></h3>
+    <div class="office-cards" id="officeCards"></div>
+  </section>
+
+  <section class="panel">
     <h3>Geography <span class="count" id="geoCount">—</span></h3>
     <div class="office-tabs" id="officeTabs">
       <span class="office-tab active" data-office="all">All</span>
@@ -1007,6 +1084,7 @@ function render() {
   renderSenders();
   renderFeed();
   renderPalantir();   // after feed so _feedRows is populated for click-to-open
+  renderOfficeMix();
   renderGeography();
 }
 
@@ -1321,6 +1399,69 @@ const STATE_GRID = {
 
 let currentOfficeFilter = 'all';
 let selectedState = null;
+
+function renderOfficeMix() {
+  // Count emails by office type using the same classifier as geography
+  const buckets = { house: 0, senate: 0, governor: 0, presidential: 0, pac: 0, other: 0 };
+  filtered.forEach(r => {
+    const c = classifySender(r);
+    const off = c.office || 'other';
+    if (buckets.hasOwnProperty(off)) buckets[off]++;
+    else buckets.other++;
+  });
+  const total = Object.values(buckets).reduce((s, n) => s + n, 0);
+  const max = Math.max(...Object.values(buckets), 1);
+
+  document.getElementById('officeMixCount').textContent =
+    total + (total === 1 ? ' email · click to filter' : ' emails · click to filter');
+
+  const order = [
+    { key: 'all',          label: 'All',           count: total },
+    { key: 'house',        label: 'House',         count: buckets.house },
+    { key: 'senate',       label: 'Senate',        count: buckets.senate },
+    { key: 'governor',     label: 'Governor',      count: buckets.governor },
+    { key: 'presidential', label: 'Presidential',  count: buckets.presidential },
+    { key: 'pac',          label: 'PAC',           count: buckets.pac },
+  ];
+  // If "Other" is non-trivial, swap it in for one of the cards.
+  // We always show 6 cards; if Other has data, replace whichever has lowest count among
+  // governor/presidential/pac with Other. Simpler: just show All + 5 office types and add Other if it exists.
+  if (buckets.other > 0) {
+    order.push({ key: 'other', label: 'Other', count: buckets.other });
+  }
+
+  const html = order.map(o => {
+    const pct = total ? Math.round((o.count / total) * 100) : 0;
+    const barWidth = max ? (o.count / max) * 100 : 0;
+    const isActive = currentOfficeFilter === o.key;
+    const subline = o.key === 'all' ? 'all offices' : pct + '% of total';
+    return `
+      <div class="office-card ${isActive ? 'active' : ''}" data-office="${o.key}">
+        <div class="office-label">${o.label}</div>
+        <div class="office-num">${o.count}</div>
+        <div class="office-pct">${subline}</div>
+        <div class="office-bar"><span style="width:${barWidth}%"></span></div>
+      </div>
+    `;
+  }).join('');
+
+  const el = document.getElementById('officeCards');
+  el.innerHTML = html;
+
+  // Wire clicks: toggle the office filter (same state used by geography tabs)
+  el.querySelectorAll('.office-card').forEach(card => {
+    card.addEventListener('click', () => {
+      currentOfficeFilter = card.dataset.office;
+      selectedState = null;
+      // Sync the geography tab UI
+      document.querySelectorAll('#officeTabs .office-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.office === currentOfficeFilter);
+      });
+      renderOfficeMix();
+      renderGeography();
+    });
+  });
+}
 
 function renderGeography() {
   const office = currentOfficeFilter;
@@ -1797,6 +1938,7 @@ document.querySelectorAll("#officeTabs .office-tab").forEach(t => {
     t.classList.add("active");
     currentOfficeFilter = t.dataset.office;
     selectedState = null;          // clear selection when switching tabs
+    renderOfficeMix();             // re-render so the matching card highlights
     renderGeography();
   });
 });

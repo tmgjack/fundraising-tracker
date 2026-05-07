@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Fundraising Tracker — Issues & Entities</title>
+<title>Democratic Email Fundraising Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=IBM+Plex+Serif:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -67,12 +67,13 @@
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.02em;
-    font-size: 36px;
-    line-height: 1;
+    font-size: 30px;
+    line-height: 1.15;
     color: #ffffff;
     background: var(--blue);
     padding: 10px 18px;
     display: inline-block;
+    max-width: 100%;
   }
   .brand h1 em {
     font-style: normal;
@@ -208,7 +209,226 @@
   .bar-row.dem .bar > span { background: linear-gradient(90deg, var(--dem), #97c0d6); }
   .bar-row.rep .bar > span { background: linear-gradient(90deg, var(--rep), #c14d62); }
 
-  .feed { display: flex; flex-direction: column; }
+  /* GEOGRAPHY */
+  .office-tabs {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  .office-tab {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--ink-dim);
+    border: 1px solid transparent;
+    transition: all .12s;
+  }
+  .office-tab:hover { color: var(--ink); border-color: var(--border); }
+  .office-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .geo-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .geo-layout { grid-template-columns: 1fr; }
+  }
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: 4px;
+  }
+  .tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--ink-dim);
+    overflow: hidden;
+    transition: all .12s;
+  }
+  .tile.empty { background: transparent; border: none; }
+  .tile.has-data { cursor: pointer; }
+  .tile.has-data:hover { border-color: var(--accent); z-index: 2; }
+  .tile.selected {
+    border-color: var(--accent);
+    border-width: 2px;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .tile .bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.78;
+    pointer-events: none;
+    transition: all .15s;
+  }
+  .tile.has-data .label {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    font-size: 11px;
+  }
+  .tile:not(.has-data) .label { color: var(--ink-faint); }
+  .geo-legend {
+    display: flex; gap: 16px; align-items: center;
+    margin-top: 14px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .geo-legend .swatch {
+    display: inline-block;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.78;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .geo-detail {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    min-height: 280px;
+  }
+  .geo-detail h4 {
+    margin: 0 0 4px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+  .geo-detail .geo-sub {
+    color: var(--ink-dim);
+    font-size: 12px;
+    font-family: 'Roboto', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+  .geo-sender {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 13px;
+  }
+  .geo-sender:last-child { border-bottom: none; }
+  .geo-sender .name { color: var(--ink); font-weight: 700; }
+  .geo-sender .meta {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .geo-sender .count-pill {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(111,39,64,0.08);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .geo-empty {
+    color: var(--ink-faint);
+    font-style: italic;
+    font-size: 13px;
+    text-align: center;
+    padding: 30px 10px;
+  }
+  .pac-callout {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: rgba(55,127,157,0.06);
+    border-left: 3px solid var(--blue);
+    border-radius: 0 3px 3px 0;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .pac-callout strong { color: var(--ink); }
+
+  .palantir-panel { display: flex; flex-direction: column; }
+  .palantir-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .palantir-stat .big {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 900;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .palantir-stat .label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .palantir-list {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .palantir-item {
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background .12s;
+    font-size: 13px;
+  }
+  .palantir-item:hover { background: rgba(111,39,64,0.06); }
+  .palantir-item .sender {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .palantir-item .subj {
+    color: var(--ink-dim);
+    font-style: italic;
+    margin-top: 2px;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+  }
+  .palantir-empty {
+    color: var(--ink-faint);
+    font-style: italic;
+    font-size: 13px;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+
   .feed-item {
     border-top: 1px solid var(--border);
     padding: 14px 0; display: grid; grid-template-columns: 1fr; gap: 6px;
@@ -462,9 +682,7 @@
 
 <header class="top">
   <div class="brand">
-    <span class="eyebrow">Political Email Intelligence</span>
-    <h1>Fundraising <em>Tracker</em></h1>
-    <span class="sub">Issues and named entities across political fundraising emails</span>
+    <h1>Democratic Email Fundraising <em>Tracker</em></h1>
   </div>
   <div class="meta">
     <div><span class="pulse"></span><span id="status">Live · auto-refresh 5m</span></div>
@@ -514,7 +732,7 @@
 
   <section class="grid-2">
     <div class="panel">
-      <h3>Top Named People <span class="count">click to filter</span></h3>
+      <h3>Top Opposition Targets <span class="count">people attacked across emails</span></h3>
       <div class="bar-list" id="peopleList"></div>
     </div>
     <div class="panel">
@@ -523,9 +741,32 @@
     </div>
   </section>
 
+  <section class="grid-2">
+    <div class="panel palantir-panel">
+      <h3>Palantir Watch <span class="count" id="palantirCount">—</span></h3>
+      <div id="palantirContent"></div>
+    </div>
+    <div class="panel">
+      <h3>Top Senders <span class="count">by email volume in current view</span></h3>
+      <div class="bar-list" id="sendersList"></div>
+    </div>
+  </section>
+
   <section class="panel">
-    <h3>Top Senders <span class="count">by email volume in current view</span></h3>
-    <div class="bar-list" id="sendersList"></div>
+    <h3>Geography <span class="count" id="geoCount">—</span></h3>
+    <div class="office-tabs" id="officeTabs">
+      <span class="office-tab active" data-office="all">All</span>
+      <span class="office-tab" data-office="house">House</span>
+      <span class="office-tab" data-office="senate">Senate</span>
+      <span class="office-tab" data-office="governor">Governor</span>
+      <span class="office-tab" data-office="presidential">Presidential</span>
+      <span class="office-tab" data-office="pac">PAC</span>
+      <span class="office-tab" data-office="other">Other</span>
+    </div>
+    <div class="geo-layout">
+      <div class="geo-map" id="geoMap"></div>
+      <div class="geo-detail" id="geoDetail"></div>
+    </div>
   </section>
 
   <section class="panel">
@@ -645,6 +886,8 @@ function normalizeRow(r) {
     subject: r.subject || "",
     party_lean: (r.party_lean || "unknown").toLowerCase(),
     sender_org: r.sender_org || r.from_name || r.from_domain,
+    state: (r.state || "").toString().trim().toUpperCase(),
+    office_type: (r.office_type || "").toString().trim().toLowerCase(),
     issues: splitTags(r.issues),
     entities_people: canonPersonList(splitTags(r.entities_people)),
     entities_orgs: filterOrgs(splitTags(r.entities_orgs)),
@@ -763,6 +1006,8 @@ function render() {
   renderOrgs();
   renderSenders();
   renderFeed();
+  renderPalantir();   // after feed so _feedRows is populated for click-to-open
+  renderGeography();
 }
 
 function renderKPIs() {
@@ -842,8 +1087,7 @@ function renderIssueChart() {
     type: 'bar',
     data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
     options: {
-      ...chartOpts({}),
-      indexAxis: 'y',
+      ...chartOpts({ indexAxis: 'y' }),
       plugins: { legend: { display: false }, tooltip: tooltipStyle() },
       onClick: (evt, elements) => {
         if (elements.length) {
@@ -861,9 +1105,427 @@ function renderIssueChart() {
 }
 
 function renderPeople() {
+  // "Opposition targets" = people mentioned in emails from the OPPOSITE party.
+  // Logic: a Republican email mentioning Biden = Biden is a target.
+  //        a Democratic email mentioning Trump = Trump is a target.
+  // Same-party mentions (e.g. Dem email mentioning AOC favorably) are excluded.
+  // Unknown-lean emails: we count their mentions for both sides since we can't tell.
   const counts = {};
-  filtered.forEach(r => r.entities_people.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  filtered.forEach(r => {
+    const lean = r.party_lean;
+    r.entities_people.forEach(person => {
+      const personLower = person.toLowerCase();
+      // Heuristic: classify the person's own affiliation by name.
+      // If we can match them to a party, only count them if the email's party is opposite.
+      const personParty = guessPersonParty(personLower);
+      if (personParty === 'unknown') {
+        // Can't classify — include them; they're being named for a reason
+        counts[person] = (counts[person] || 0) + 1;
+      } else if (personParty !== lean) {
+        // Person is from the OTHER party from the email sender → opposition target
+        counts[person] = (counts[person] || 0) + 1;
+      }
+      // else: same-party mention, skip
+    });
+  });
   renderClickableBarList("peopleList", counts, "person");
+}
+
+// Rough party affiliation lookup for common figures.
+// Used to filter out same-party mentions from the Opposition Targets panel.
+const PERSON_PARTY = {
+  // Republicans
+  'trump': 'republican',
+  'desantis': 'republican',
+  'mike johnson': 'republican',
+  'mitch mcconnell': 'republican',
+  'ted cruz': 'republican',
+  'josh hawley': 'republican',
+  'marjorie taylor greene': 'republican',
+  'mtg': 'republican',
+  'jim jordan': 'republican',
+  'kevin mccarthy': 'republican',
+  'lindsey graham': 'republican',
+  'elon musk': 'republican',
+  'jd vance': 'republican',
+  'j.d. vance': 'republican',
+  'vance': 'republican',
+  'ron desantis': 'republican',
+  'nikki haley': 'republican',
+  // Democrats
+  'biden': 'democrat',
+  'harris': 'democrat',
+  'kamala harris': 'democrat',
+  'aoc': 'democrat',
+  'bernie sanders': 'democrat',
+  'warren': 'democrat',
+  'elizabeth warren': 'democrat',
+  'pelosi': 'democrat',
+  'nancy pelosi': 'democrat',
+  'schumer': 'democrat',
+  'chuck schumer': 'democrat',
+  'obama': 'democrat',
+  'barack obama': 'democrat',
+  'newsom': 'democrat',
+  'gavin newsom': 'democrat',
+  'whitmer': 'democrat',
+  'gretchen whitmer': 'democrat',
+};
+function guessPersonParty(nameLower) {
+  return PERSON_PARTY[nameLower] || 'unknown';
+}
+
+// ============================================================
+// GEOGRAPHY
+// ============================================================
+
+// Sender → state + office classifier for emails that don't have those fields
+// in the sheet yet. The AI prompt now extracts state/office_type for new emails,
+// but historical rows fall back to this lookup. Add entries as needed.
+const SENDER_LOOKUP = {
+  // National PACs (use 'US' for state)
+  'dscc': { state: 'US', office: 'pac' },
+  'nrsc': { state: 'US', office: 'pac' },
+  'dccc': { state: 'US', office: 'pac' },
+  'nrcc': { state: 'US', office: 'pac' },
+  'dnc': { state: 'US', office: 'pac' },
+  'rnc': { state: 'US', office: 'pac' },
+  'dga': { state: 'US', office: 'pac' },
+  'rga': { state: 'US', office: 'pac' },
+  'dlcc': { state: 'US', office: 'pac' },
+  'club for growth': { state: 'US', office: 'pac' },
+  'heritage action': { state: 'US', office: 'pac' },
+  'planned parenthood action fund': { state: 'US', office: 'pac' },
+  'planned parenthood action': { state: 'US', office: 'pac' },
+  'sierra club': { state: 'US', office: 'pac' },
+  'everytown for gun safety': { state: 'US', office: 'pac' },
+  'moveon': { state: 'US', office: 'pac' },
+  'turning point usa': { state: 'US', office: 'pac' },
+  'freedomworks': { state: 'US', office: 'pac' },
+  'justice democrats': { state: 'US', office: 'pac' },
+  'nra political victory fund': { state: 'US', office: 'pac' },
+  'nra-pvf': { state: 'US', office: 'pac' },
+  'emily\'s list': { state: 'US', office: 'pac' },
+  'emilys list': { state: 'US', office: 'pac' },
+
+  // Senate candidates
+  'chris coons': { state: 'DE', office: 'senate' },
+  'team coons': { state: 'DE', office: 'senate' },
+  'ben ray lujan': { state: 'NM', office: 'senate' },
+  'ben ray lujan for u.s. senate': { state: 'NM', office: 'senate' },
+  'jocelyn benson': { state: 'MI', office: 'senate' },  // 2026 MI Senate
+  'sherif street': { state: 'PA', office: 'senate' },
+  'team sharif street': { state: 'PA', office: 'senate' },
+  'team sherif street': { state: 'PA', office: 'senate' },
+  'warren for senate': { state: 'MA', office: 'senate' },
+  'friends of bernie sanders': { state: 'VT', office: 'senate' },
+  'mike johnson': { state: 'LA', office: 'house' },  // Speaker, runs in LA
+  'mike johnson committee': { state: 'LA', office: 'house' },
+
+  // House candidates
+  'gabe amo': { state: 'RI', office: 'house' },
+  'gabe amo for congress': { state: 'RI', office: 'house' },
+  'team mgs': { state: 'NJ', office: 'house' },  // Mikie Sherrill — change to governor if applicable
+  'congressman brendan': { state: 'PA', office: 'house' },
+  'congressman brendan boyle': { state: 'PA', office: 'house' },
+  'team boyle': { state: 'PA', office: 'house' },
+  'team dr. ala stanford': { state: 'PA', office: 'house' },
+  'alexandria ocasio-cortez for congress': { state: 'NY', office: 'house' },
+
+  // Governor candidates
+  'wes moore': { state: 'MD', office: 'governor' },
+  'mikie sherrill': { state: 'NJ', office: 'governor' },
+  'desantis committee': { state: 'FL', office: 'governor' },
+
+  // Presidential
+  'trump national committee': { state: 'US', office: 'presidential' },
+  'donald j. trump for president': { state: 'US', office: 'presidential' },
+};
+
+function classifySender(row) {
+  // 1. If the row already has explicit state + office_type from the AI, use those
+  if (row.state && row.state !== 'unknown' && row.office_type && row.office_type !== 'other') {
+    return { state: row.state.toUpperCase(), office: row.office_type.toLowerCase() };
+  }
+  // 2. Otherwise look up by sender_org (lowercased)
+  const key = (row.sender_org || row.from_name || '').toLowerCase().trim();
+  if (SENDER_LOOKUP[key]) return SENDER_LOOKUP[key];
+  // 3. Try partial substring match
+  for (const lookupKey in SENDER_LOOKUP) {
+    if (key.includes(lookupKey) || lookupKey.includes(key)) {
+      return SENDER_LOOKUP[lookupKey];
+    }
+  }
+  // 4. Fall back to whatever we DO have
+  return {
+    state: (row.state || 'unknown').toUpperCase(),
+    office: (row.office_type || 'other').toLowerCase()
+  };
+}
+
+// US tile-grid coordinates: { row, col } based on standard 11-col grid.
+// Coordinates from NPR-style state grid maps.
+const STATE_GRID = {
+  AK: { row: 0, col: 0,  name: 'Alaska' },
+  ME: { row: 0, col: 10, name: 'Maine' },
+  VT: { row: 1, col: 9,  name: 'Vermont' },
+  NH: { row: 1, col: 10, name: 'New Hampshire' },
+  WA: { row: 2, col: 1,  name: 'Washington' },
+  ID: { row: 2, col: 2,  name: 'Idaho' },
+  MT: { row: 2, col: 3,  name: 'Montana' },
+  ND: { row: 2, col: 4,  name: 'North Dakota' },
+  MN: { row: 2, col: 5,  name: 'Minnesota' },
+  IL: { row: 2, col: 6,  name: 'Illinois' },
+  WI: { row: 2, col: 7,  name: 'Wisconsin' },
+  MI: { row: 2, col: 8,  name: 'Michigan' },
+  NY: { row: 2, col: 9,  name: 'New York' },
+  MA: { row: 2, col: 10, name: 'Massachusetts' },
+  OR: { row: 3, col: 1,  name: 'Oregon' },
+  NV: { row: 3, col: 2,  name: 'Nevada' },
+  WY: { row: 3, col: 3,  name: 'Wyoming' },
+  SD: { row: 3, col: 4,  name: 'South Dakota' },
+  IA: { row: 3, col: 5,  name: 'Iowa' },
+  IN: { row: 3, col: 6,  name: 'Indiana' },
+  OH: { row: 3, col: 7,  name: 'Ohio' },
+  PA: { row: 3, col: 8,  name: 'Pennsylvania' },
+  NJ: { row: 3, col: 9,  name: 'New Jersey' },
+  CT: { row: 3, col: 10, name: 'Connecticut' },
+  CA: { row: 4, col: 1,  name: 'California' },
+  UT: { row: 4, col: 2,  name: 'Utah' },
+  CO: { row: 4, col: 3,  name: 'Colorado' },
+  NE: { row: 4, col: 4,  name: 'Nebraska' },
+  MO: { row: 4, col: 5,  name: 'Missouri' },
+  KY: { row: 4, col: 6,  name: 'Kentucky' },
+  WV: { row: 4, col: 7,  name: 'West Virginia' },
+  VA: { row: 4, col: 8,  name: 'Virginia' },
+  MD: { row: 4, col: 9,  name: 'Maryland' },
+  DE: { row: 4, col: 10, name: 'Delaware' },
+  AZ: { row: 5, col: 2,  name: 'Arizona' },
+  NM: { row: 5, col: 3,  name: 'New Mexico' },
+  KS: { row: 5, col: 4,  name: 'Kansas' },
+  AR: { row: 5, col: 5,  name: 'Arkansas' },
+  TN: { row: 5, col: 6,  name: 'Tennessee' },
+  NC: { row: 5, col: 7,  name: 'North Carolina' },
+  SC: { row: 5, col: 8,  name: 'South Carolina' },
+  DC: { row: 5, col: 9,  name: 'District of Columbia' },
+  RI: { row: 5, col: 10, name: 'Rhode Island' },
+  HI: { row: 6, col: 0,  name: 'Hawaii' },
+  TX: { row: 6, col: 4,  name: 'Texas' },
+  OK: { row: 6, col: 3,  name: 'Oklahoma' },
+  LA: { row: 6, col: 5,  name: 'Louisiana' },
+  MS: { row: 6, col: 6,  name: 'Mississippi' },
+  AL: { row: 6, col: 7,  name: 'Alabama' },
+  GA: { row: 6, col: 8,  name: 'Georgia' },
+  FL: { row: 6, col: 9,  name: 'Florida' },
+};
+
+let currentOfficeFilter = 'all';
+let selectedState = null;
+
+function renderGeography() {
+  const office = currentOfficeFilter;
+
+  // Build per-row classification, then aggregate by state for the chosen office filter
+  const stateData = {};   // 'DE' -> { count, senders: { 'Chris Coons': N, ... } }
+  let nationalPacCount = 0;
+  let nationalPacSenders = {};
+  let unknownCount = 0;
+
+  filtered.forEach(r => {
+    const c = classifySender(r);
+    if (office !== 'all' && c.office !== office) return;
+
+    if (c.state === 'US') {
+      nationalPacCount++;
+      const k = r.sender_org || r.from_name || r.from_domain;
+      nationalPacSenders[k] = (nationalPacSenders[k] || 0) + 1;
+      return;
+    }
+    if (!c.state || c.state === 'UNKNOWN') {
+      unknownCount++;
+      return;
+    }
+    if (!STATE_GRID[c.state]) return;  // unrecognized code
+
+    if (!stateData[c.state]) stateData[c.state] = { count: 0, senders: {} };
+    stateData[c.state].count++;
+    const k = r.sender_org || r.from_name || r.from_domain;
+    stateData[c.state].senders[k] = (stateData[c.state].senders[k] || 0) + 1;
+  });
+
+  // Find max count for bubble sizing
+  const counts = Object.values(stateData).map(s => s.count);
+  const maxCount = counts.length ? Math.max(...counts) : 1;
+
+  // Top-level counter
+  const totalGeoEmails = Object.values(stateData).reduce((s, x) => s + x.count, 0) + nationalPacCount;
+  document.getElementById('geoCount').textContent =
+    totalGeoEmails + ' classified · ' + unknownCount + ' unclassified';
+
+  // Build the tile grid
+  const grid = document.getElementById('geoMap');
+  const tiles = [];
+  for (let row = 0; row < 7; row++) {
+    for (let col = 0; col < 11; col++) {
+      const stateCode = Object.keys(STATE_GRID).find(s =>
+        STATE_GRID[s].row === row && STATE_GRID[s].col === col
+      );
+      if (!stateCode) {
+        tiles.push(`<div class="tile empty"></div>`);
+      } else {
+        const info = STATE_GRID[stateCode];
+        const data = stateData[stateCode];
+        const hasData = !!data;
+        const count = data ? data.count : 0;
+        const sizePct = hasData ? Math.max(35, Math.min(95, (count / maxCount) * 95)) : 0;
+        const isSelected = selectedState === stateCode;
+
+        tiles.push(`
+          <div class="tile ${hasData ? 'has-data' : ''} ${isSelected ? 'selected' : ''}"
+               data-state="${stateCode}"
+               title="${info.name}${hasData ? ' · ' + count + ' email' + (count===1?'':'s') : ''}">
+            ${hasData ? `<span class="bubble" style="width:${sizePct}%;height:${sizePct}%;left:${(100-sizePct)/2}%;top:${(100-sizePct)/2}%;"></span>` : ''}
+            <span class="label">${stateCode}</span>
+          </div>
+        `);
+      }
+    }
+  }
+
+  let pacBlock = '';
+  if (nationalPacCount > 0) {
+    const topPacs = Object.entries(nationalPacSenders).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const pacList = topPacs.map(([n,c]) => `<strong>${escapeHtml(n)}</strong> (${c})`).join(', ');
+    pacBlock = `<div class="pac-callout"><strong>${nationalPacCount}</strong> ${nationalPacCount===1?'email':'emails'} from national PACs/committees not tied to one state — ${pacList}${topPacs.length<Object.keys(nationalPacSenders).length?', and others':''}.</div>`;
+  }
+
+  grid.innerHTML = `
+    <div class="tile-grid">${tiles.join('')}</div>
+    <div class="geo-legend">
+      <span><span class="swatch" style="width:8px;height:8px;"></span> 1 email</span>
+      <span><span class="swatch" style="width:14px;height:14px;"></span> Several</span>
+      <span><span class="swatch" style="width:22px;height:22px;"></span> Many</span>
+      <span style="margin-left:auto">Click a state for detail</span>
+    </div>
+    ${pacBlock}
+  `;
+
+  // Wire click handlers on tiles
+  grid.querySelectorAll('.tile.has-data').forEach(t => {
+    t.addEventListener('click', () => {
+      const s = t.dataset.state;
+      selectedState = (selectedState === s) ? null : s;
+      renderGeography();   // re-render to update selection
+    });
+  });
+
+  // Render the detail pane on the right
+  renderGeoDetail(stateData, nationalPacSenders, nationalPacCount);
+}
+
+function renderGeoDetail(stateData, nationalPacSenders, nationalPacCount) {
+  const el = document.getElementById('geoDetail');
+
+  if (!selectedState) {
+    // Default view: top 5 states + "click a state" hint
+    const top = Object.entries(stateData)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 6);
+    if (!top.length && nationalPacCount === 0) {
+      el.innerHTML = `<div class="geo-empty">No classified emails in this filter.</div>`;
+      return;
+    }
+    const items = top.map(([code, d]) => `
+      <div class="geo-sender" style="cursor:pointer" onclick="selectedState='${code}'; renderGeography();">
+        <div>
+          <div class="name">${STATE_GRID[code].name}</div>
+          <div class="meta">${code}</div>
+        </div>
+        <span class="count-pill">${d.count}</span>
+      </div>
+    `).join('');
+    el.innerHTML = `
+      <h4>Top States</h4>
+      <div class="geo-sub">By email volume in current view</div>
+      ${items || '<div class="geo-empty">No state-specific senders.</div>'}
+    `;
+    return;
+  }
+
+  // Detail for the selected state
+  const info = STATE_GRID[selectedState];
+  const data = stateData[selectedState];
+  if (!data) {
+    el.innerHTML = `<h4>${info.name}</h4><div class="geo-sub">${selectedState}</div><div class="geo-empty">No emails from this state in current filter.</div>`;
+    return;
+  }
+  const senders = Object.entries(data.senders).sort((a, b) => b[1] - a[1]);
+  const items = senders.map(([n, c]) => `
+    <div class="geo-sender" style="cursor:pointer" onclick='document.getElementById("search").value=${JSON.stringify(n)}; applyFilters(); document.getElementById("feed").scrollIntoView({behavior:"smooth"});'>
+      <div>
+        <div class="name">${escapeHtml(n)}</div>
+        <div class="meta">${c} ${c===1?'email':'emails'}</div>
+      </div>
+      <span class="count-pill">${c}</span>
+    </div>
+  `).join('');
+  el.innerHTML = `
+    <h4>${info.name}</h4>
+    <div class="geo-sub">${selectedState} · ${data.count} ${data.count===1?'email':'emails'}</div>
+    ${items}
+  `;
+}
+
+function renderPalantir() {
+  // Find every email mentioning Palantir in entities_orgs, body, or subject.
+  const matches = filtered.filter(r => {
+    const inOrgs = r.entities_orgs.some(o => o.toLowerCase().includes('palantir'));
+    const inText = (r.subject + ' ' + r.body_text + ' ' + r.one_line_summary)
+      .toLowerCase().includes('palantir');
+    return inOrgs || inText;
+  });
+
+  document.getElementById('palantirCount').textContent =
+    matches.length + (matches.length === 1 ? ' email' : ' emails');
+
+  const el = document.getElementById('palantirContent');
+
+  if (!matches.length) {
+    el.innerHTML = `
+      <div class="palantir-stat">
+        <span class="big">0</span>
+        <span class="label">mentions in current view</span>
+      </div>
+      <div class="palantir-empty">No emails mentioning Palantir in this filter / time range.</div>`;
+    return;
+  }
+
+  // Sort newest first, show top 10
+  const sorted = matches
+    .slice()
+    .sort((a, b) => new Date(b.received_at) - new Date(a.received_at))
+    .slice(0, 10);
+
+  const items = sorted.map(r => {
+    const when = new Date(r.received_at);
+    const whenStr = isNaN(when) ? '' : when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    // Click sets the global search to the subject — surfaces the email in the feed below.
+    const safeSubj = (r.subject || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `
+      <div class="palantir-item" onclick="document.getElementById('search').value=${JSON.stringify(r.subject||'')}; applyFilters(); document.getElementById('feed').scrollIntoView({behavior:'smooth'});">
+        <div><span class="sender">${escapeHtml(r.sender_org || r.from_name)}</span> · <span style="font-family:Roboto;font-size:11px;color:var(--ink-faint)">${whenStr}</span></div>
+        <div class="subj">${escapeHtml(r.subject)}</div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="palantir-stat">
+      <span class="big">${matches.length}</span>
+      <span class="label">${matches.length === 1 ? 'mention' : 'mentions'} in current view</span>
+    </div>
+    <div class="palantir-list">${items}</div>
+  `;
 }
 function renderOrgs() {
   const counts = {};
@@ -935,30 +1597,43 @@ function renderFeed() {
   }).join("");
 }
 
-function chartOpts({ stacked = false, yLabel = '' } = {}) {
+function chartOpts({ stacked = false, yLabel = '', indexAxis = 'x' } = {}) {
+  // For vertical bars (indexAxis='x'), Y is the value axis.
+  // For horizontal bars (indexAxis='y'), X is the value axis and Y is the category axis.
+  const valueAxisTicks = {
+    color: '#888b95',
+    font: { family: 'Roboto', size: 10 },
+    stepSize: 1,
+    precision: 0,
+    callback: function(value) {
+      return Number.isInteger(value) ? value : null;
+    }
+  };
+  const categoryAxisTicks = {
+    color: '#888b95',
+    font: { family: 'Roboto', size: 10 }
+    // No stepSize/callback — categories are strings, leave them alone
+  };
+
+  const xIsValue = indexAxis === 'y';   // horizontal bars: X is value
+  const yIsValue = indexAxis === 'x';   // vertical bars: Y is value
+
   return {
     responsive: true, maintainAspectRatio: false,
+    indexAxis,
     scales: {
       x: {
         stacked,
-        ticks: { color: '#888b95', font: { family: 'Roboto', size: 10 } },
+        beginAtZero: xIsValue ? true : undefined,
+        ticks: xIsValue ? valueAxisTicks : categoryAxisTicks,
         grid: { color: 'rgba(31, 39, 64, 0.05)' }
       },
       y: {
         stacked,
-        beginAtZero: true,
-        ticks: {
-          color: '#888b95',
-          font: { family: 'Roboto', size: 10 },
-          stepSize: 1,                       // integer ticks only
-          precision: 0,
-          callback: function(value) {
-            if (Number.isInteger(value)) return value;
-            return null;                      // hide non-integer labels
-          }
-        },
+        beginAtZero: yIsValue ? true : undefined,
+        ticks: yIsValue ? valueAxisTicks : categoryAxisTicks,
         grid: { color: 'rgba(31, 39, 64, 0.05)' },
-        title: yLabel ? {
+        title: (yIsValue && yLabel) ? {
           display: true,
           text: yLabel,
           color: '#6f2740',
@@ -1112,6 +1787,17 @@ document.querySelectorAll("#leanPills .pill").forEach(p => {
     p.classList.add("active");
     currentLean = p.dataset.lean;
     applyFilters();
+  });
+});
+
+// Office tabs in the Geography panel
+document.querySelectorAll("#officeTabs .office-tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll("#officeTabs .office-tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    currentOfficeFilter = t.dataset.office;
+    selectedState = null;          // clear selection when switching tabs
+    renderGeography();
   });
 });
 

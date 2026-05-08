@@ -962,6 +962,7 @@ function normalizeRow(r) {
     issues: splitTags(r.issues),
     entities_people: canonPersonList(splitTags(r.entities_people)),
     entities_orgs: filterOrgs(splitTags(r.entities_orgs)),
+    opposition_targets: canonPersonList(splitTags(r.opposition_targets)),
     one_line_summary: r.one_line_summary || "",
     body_text: r.body_text || r.body_excerpt || "",
     gmail_url: r.gmail_url || ""
@@ -1242,29 +1243,54 @@ function renderIssueChart() {
 }
 
 function renderPeople() {
-  // "Opposition targets" = people mentioned in emails from the OPPOSITE party.
-  // Logic: a Republican email mentioning Biden = Biden is a target.
-  //        a Democratic email mentioning Trump = Trump is a target.
-  // Same-party mentions (e.g. Dem email mentioning AOC favorably) are excluded.
-  // Unknown-lean emails: we count their mentions for both sides since we can't tell.
+  // Opposition Targets — preferred source: the AI's `opposition_targets` field
+  // (added to the n8n prompt — the AI decides who's a target with full context).
+  //
+  // For rows that don't have this field yet (older rows processed before the prompt
+  // change, or any row where the AI returned an empty list), we fall back to a
+  // tightened version of the old client-side logic:
+  //   - Cross-party mentions count as targets
+  //   - Same-party mentions are excluded
+  //   - The email's OWN sender is always excluded (this fixes the Angie Craig bug)
+  //   - Unknown-affiliation people are EXCLUDED, not included (conservative default)
+
   const counts = {};
+
+  // Helper: does a name look like the email's own sender? Match against sender_org and from_name.
+  function isSelfReference(personLower, row) {
+    const senderOrg = (row.sender_org || '').toLowerCase();
+    const fromName = (row.from_name || '').toLowerCase();
+    // Direct match
+    if (senderOrg.includes(personLower) || fromName.includes(personLower)) return true;
+    // Sender's last-name in person string (e.g. row "Angie Craig for Minnesota" matches "Angie Craig" or just "Craig")
+    const tokens = personLower.split(/\s+/).filter(t => t.length > 2);
+    return tokens.some(t => senderOrg.includes(t) || fromName.includes(t));
+  }
+
   filtered.forEach(r => {
+    // PRIMARY PATH: trust the AI's opposition_targets if it exists for this row.
+    if (r.opposition_targets && r.opposition_targets.length) {
+      r.opposition_targets.forEach(person => {
+        const pLower = person.toLowerCase();
+        // Final safety: skip if it's the sender (AI should already have done this, but belt and suspenders)
+        if (isSelfReference(pLower, r)) return;
+        counts[person] = (counts[person] || 0) + 1;
+      });
+      return;
+    }
+
+    // FALLBACK PATH: for older rows without AI-tagged opposition.
     const lean = r.party_lean;
     r.entities_people.forEach(person => {
-      const personLower = person.toLowerCase();
-      // Heuristic: classify the person's own affiliation by name.
-      // If we can match them to a party, only count them if the email's party is opposite.
-      const personParty = guessPersonParty(personLower);
-      if (personParty === 'unknown') {
-        // Can't classify — include them; they're being named for a reason
-        counts[person] = (counts[person] || 0) + 1;
-      } else if (personParty !== lean) {
-        // Person is from the OTHER party from the email sender → opposition target
-        counts[person] = (counts[person] || 0) + 1;
-      }
-      // else: same-party mention, skip
+      const pLower = person.toLowerCase();
+      if (isSelfReference(pLower, r)) return;            // never count own sender
+      const personParty = guessPersonParty(pLower);
+      if (personParty === 'unknown') return;              // conservative: skip unknowns
+      if (personParty === lean) return;                   // same-party = ally, skip
+      counts[person] = (counts[person] || 0) + 1;
     });
   });
+
   renderClickableBarList("peopleList", counts, "person");
 }
 

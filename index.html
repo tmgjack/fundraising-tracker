@@ -1139,7 +1139,7 @@ function renderKPIs() {
   document.getElementById("kpiTopSenderSub").textContent = topSender ? `${topSender[1]} ${topSender[1] === 1 ? 'email' : 'emails'}` : "no data";
 
   document.getElementById("volCount").textContent = filtered.length + " emails";
-  document.getElementById("feedCount").textContent = filtered.length + " emails";
+  document.getElementById("feedCount").textContent = filtered.length + " emails in last 7d";
 }
 
 function renderVolumeChart() {

@@ -1128,18 +1128,20 @@ function renderKPIs() {
   document.getElementById("kpiTopIssue").textContent = topIssue ? formatIssue(topIssue[0]) : "—";
   document.getElementById("kpiTopIssueSub").textContent = topIssue ? `${topIssue[1]} mentions in last 7d` : "no data";
 
-  // Most Active Sender: org with the most emails in current view
+  // Most Active Sender: org with most emails in the last 7 days (independent of current view)
   const senderCounts = {};
-  filtered.forEach(r => {
+  allRows.forEach(r => {
+    const t = new Date(r.received_at).getTime();
+    if (isNaN(t) || t < sevenDaysAgo) return;
     const k = r.sender_org || r.from_name || r.from_domain;
     if (k) senderCounts[k] = (senderCounts[k] || 0) + 1;
   });
   const topSender = Object.entries(senderCounts).sort((a, b) => b[1] - a[1])[0];
   document.getElementById("kpiTopSender").textContent = topSender ? topSender[0] : "—";
-  document.getElementById("kpiTopSenderSub").textContent = topSender ? `${topSender[1]} ${topSender[1] === 1 ? 'email' : 'emails'}` : "no data";
+  document.getElementById("kpiTopSenderSub").textContent = topSender ? `${topSender[1]} ${topSender[1] === 1 ? 'email' : 'emails'} in last 7d` : "no data";
 
   document.getElementById("volCount").textContent = filtered.length + " emails";
-  document.getElementById("feedCount").textContent = filtered.length + " emails in last 7d";
+  document.getElementById("feedCount").textContent = filtered.length + " emails";
 }
 
 function renderVolumeChart() {
@@ -1147,16 +1149,35 @@ function renderVolumeChart() {
   const days = currentDays === 9999 ? 30 : Math.min(currentDays, 30);
   const labels = [];
   const buckets = {};
+
+  // Build a YYYY-MM-DD key from a Date using LOCAL time (not UTC),
+  // so an email received at 10pm local doesn't fall into tomorrow's bucket.
+  const localKey = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // Today (local), midnight
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const key = d.toISOString().slice(0, 10);
+    const d = new Date(today.getTime() - i * 86400000);
+    const key = localKey(d);
     labels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
     buckets[key] = 0;
   }
+
   filtered.forEach(r => {
-    const key = (r.received_at || "").slice(0, 10);
+    if (!r.received_at) return;
+    const t = new Date(r.received_at);
+    if (isNaN(t)) return;
+    const key = localKey(t);    // bucket by the LOCAL date the email landed
     if (buckets[key] !== undefined) buckets[key]++;
   });
+
   const data = Object.values(buckets);
 
   if (charts.vol) charts.vol.destroy();

@@ -956,7 +956,7 @@ function normalizeRow(r) {
     from_domain: r.from_domain || (r.from_email && r.from_email.includes("@") ? r.from_email.split("@")[1] : ""),
     subject: r.subject || "",
     party_lean: (r.party_lean || "unknown").toLowerCase(),
-    sender_org: r.sender_org || r.from_name || (r.from_email && r.from_email.includes("@") ? r.from_email.split("@")[1] : "") || "Unknown",
+    sender_org: (r.sender_org && r.sender_org.toLowerCase() !== 'unknown' ? r.sender_org : null) || r.from_name || (r.from_email && r.from_email.includes("@") ? r.from_email.split("@")[1] : "") || "", || r.from_name || (r.from_email && r.from_email.includes("@") ? r.from_email.split("@")[1] : "") || "Unknown",
     state: (r.state || "").toString().trim().toUpperCase(),
     office_type: (r.office_type || "").toString().trim().toLowerCase(),
     issues: splitTags(r.issues),

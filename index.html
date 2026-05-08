@@ -768,8 +768,8 @@
   <section class="kpis" id="kpis">
     <div class="kpi"><div class="label">Total Emails</div><div class="val" id="kpiTotal">—</div><div class="delta" id="kpiTotalSub">all time</div></div>
     <div class="kpi"><div class="label">Last 7 Days</div><div class="val" id="kpi7">—</div><div class="delta" id="kpi7Sub">vs prior 7d</div></div>
-    <div class="kpi party-d"><div class="label">Democrat Share</div><div class="val" id="kpiDem">—</div><div class="delta" id="kpiDemSub">of current view</div></div>
-    <div class="kpi party-r"><div class="label">Republican Share</div><div class="val" id="kpiRep">—</div><div class="delta" id="kpiRepSub">of current view</div></div>
+    <div class="kpi"><div class="label">Top Issue</div><div class="val" id="kpiTopIssue" style="font-size:24px">—</div><div class="delta" id="kpiTopIssueSub">—</div></div>
+    <div class="kpi"><div class="label">Most Active Sender</div><div class="val" id="kpiTopSender" style="font-size:20px">—</div><div class="delta" id="kpiTopSenderSub">—</div></div>
   </section>
 
   <section class="controls">
@@ -783,12 +783,6 @@
       <option value="pac">PAC</option>
       <option value="other">Other</option>
     </select>
-    <div class="pill-group" id="leanPills">
-      <span class="pill active" data-lean="all">All</span>
-      <span class="pill" data-lean="democrat">Dem</span>
-      <span class="pill" data-lean="republican">Rep</span>
-      <span class="pill" data-lean="independent">Ind</span>
-    </div>
     <select id="rangeSel">
       <option value="7">Last 7 days</option>
       <option value="14" selected>Last 14 days</option>
@@ -979,6 +973,16 @@ function splitTags(s) {
   return String(s).split(/[,;]/).map(x => x.trim()).filter(Boolean);
 }
 
+// Convert hyphenated issue tags into Title Case with spaces.
+// e.g. "free-speech" -> "Free Speech", "voting-rights" -> "Voting Rights"
+function formatIssue(s) {
+  if (!s) return s;
+  return String(s)
+    .split(/[-_]/)
+    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w)
+    .join(' ');
+}
+
 // Canonicalize person names — merge Trump variants, etc.
 const PERSON_ALIASES = {
   'donald trump': 'Trump',
@@ -1018,6 +1022,10 @@ const EXCLUDED_ORGS = new Set([
   'act blue',
   'winred',
   'win red',
+  'the messina group',
+  'messina group',
+  'tmg',
+  'themessinagroup',
 ]);
 function filterOrgs(orgs) {
   return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));
@@ -1102,19 +1110,33 @@ function renderKPIs() {
     return t >= prev7Cut && t < last7Cut;
   }).length;
 
-  const dem = filtered.filter(r => r.party_lean === "democrat").length;
-  const rep = filtered.filter(r => r.party_lean === "republican").length;
-  const fTot = filtered.length || 1;
-
   document.getElementById("kpiTotal").textContent = total;
   document.getElementById("kpiTotalSub").textContent = `${filtered.length} in current view`;
   document.getElementById("kpi7").textContent = last7;
   const delta = prev7 ? Math.round(((last7 - prev7) / prev7) * 100) : 0;
   document.getElementById("kpi7Sub").textContent = (delta >= 0 ? "+" : "") + delta + "% vs prior 7d";
-  document.getElementById("kpiDem").textContent = Math.round((dem / fTot) * 100) + "%";
-  document.getElementById("kpiDemSub").textContent = `${dem} emails`;
-  document.getElementById("kpiRep").textContent = Math.round((rep / fTot) * 100) + "%";
-  document.getElementById("kpiRepSub").textContent = `${rep} emails`;
+
+  // Top Issue: most-mentioned issue tag across the last 7 days (independent of current view)
+  const sevenDaysAgo = Date.now() - 7 * 86400000;
+  const issueCounts = {};
+  allRows.forEach(r => {
+    const t = new Date(r.received_at).getTime();
+    if (isNaN(t) || t < sevenDaysAgo) return;
+    r.issues.forEach(i => issueCounts[i] = (issueCounts[i] || 0) + 1);
+  });
+  const topIssue = Object.entries(issueCounts).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById("kpiTopIssue").textContent = topIssue ? formatIssue(topIssue[0]) : "—";
+  document.getElementById("kpiTopIssueSub").textContent = topIssue ? `${topIssue[1]} mentions in last 7d` : "no data";
+
+  // Most Active Sender: org with the most emails in current view
+  const senderCounts = {};
+  filtered.forEach(r => {
+    const k = r.sender_org || r.from_name || r.from_domain;
+    if (k) senderCounts[k] = (senderCounts[k] || 0) + 1;
+  });
+  const topSender = Object.entries(senderCounts).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById("kpiTopSender").textContent = topSender ? topSender[0] : "—";
+  document.getElementById("kpiTopSenderSub").textContent = topSender ? `${topSender[1]} ${topSender[1] === 1 ? 'email' : 'emails'}` : "no data";
 
   document.getElementById("volCount").textContent = filtered.length + " emails";
   document.getElementById("feedCount").textContent = filtered.length + " emails";
@@ -1129,17 +1151,13 @@ function renderVolumeChart() {
     const d = new Date(Date.now() - i * 86400000);
     const key = d.toISOString().slice(0, 10);
     labels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
-    buckets[key] = { democrat: 0, republican: 0, independent: 0, unknown: 0 };
+    buckets[key] = 0;
   }
   filtered.forEach(r => {
     const key = (r.received_at || "").slice(0, 10);
-    if (buckets[key]) {
-      buckets[key][r.party_lean] = (buckets[key][r.party_lean] || 0) + 1;
-    }
+    if (buckets[key] !== undefined) buckets[key]++;
   });
-  const dem = Object.values(buckets).map(b => b.democrat);
-  const rep = Object.values(buckets).map(b => b.republican);
-  const oth = Object.values(buckets).map(b => (b.independent || 0) + (b.unknown || 0));
+  const data = Object.values(buckets);
 
   if (charts.vol) charts.vol.destroy();
   charts.vol = new Chart(ctx, {
@@ -1147,12 +1165,16 @@ function renderVolumeChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Democrat', data: dem, backgroundColor: '#377f9d', stack: 's' },
-        { label: 'Republican', data: rep, backgroundColor: '#9e2339', stack: 's' },
-        { label: 'Other/Unknown', data: oth, backgroundColor: '#888b95', stack: 's' }
+        { label: 'Emails', data, backgroundColor: '#377f9d', borderRadius: 2 }
       ]
     },
-    options: chartOpts({ stacked: true, yLabel: 'Number of Emails' })
+    options: {
+      ...chartOpts({ stacked: false, yLabel: 'Number of Emails' }),
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipStyle()
+      }
+    }
   });
 }
 
@@ -1160,7 +1182,8 @@ function renderIssueChart() {
   const counts = {};
   filtered.forEach(r => r.issues.forEach(t => counts[t] = (counts[t] || 0) + 1));
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  const labels = sorted.map(x => x[0]);
+  const labels = sorted.map(x => formatIssue(x[0]));   // Display: "Free Speech" not "free-speech"
+  const rawLabels = sorted.map(x => x[0]);              // Keep raw tags for click-to-filter
   const data = sorted.map(x => x[1]);
 
   const ctx = document.getElementById("issueChart");
@@ -1170,11 +1193,22 @@ function renderIssueChart() {
     data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
     options: {
       ...chartOpts({ indexAxis: 'y' }),
+      // Match the font scale of the bar-list panels below (13px, slightly heavier)
+      scales: {
+        ...chartOpts({ indexAxis: 'y' }).scales,
+        y: {
+          ...chartOpts({ indexAxis: 'y' }).scales.y,
+          ticks: {
+            color: '#1a1a1f',
+            font: { family: 'Roboto', size: 13, weight: '500' }
+          }
+        }
+      },
       plugins: { legend: { display: false }, tooltip: tooltipStyle() },
       onClick: (evt, elements) => {
         if (elements.length) {
           const idx = elements[0].index;
-          setTagFilter('issue', labels[idx]);
+          setTagFilter('issue', rawLabels[idx]);  // Filter by raw tag, not display label
         }
       },
       onHover: (evt, elements) => {
@@ -1731,7 +1765,7 @@ function renderFeed() {
     const when = new Date(r.received_at);
     const whenStr = isNaN(when) ? "" : when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     const tags = [
-      ...r.issues.map(t => `<span class="tag issue" onclick='event.stopPropagation();setTagFilter("issue", ${JSON.stringify(t)})'>${escapeHtml(t)}</span>`),
+      ...r.issues.map(t => `<span class="tag issue" onclick='event.stopPropagation();setTagFilter("issue", ${JSON.stringify(t)})'>${escapeHtml(formatIssue(t))}</span>`),
       ...r.entities_people.map(t => `<span class="tag entity" onclick='event.stopPropagation();setTagFilter("person", ${JSON.stringify(t)})'>@${escapeHtml(t)}</span>`),
       ...r.entities_orgs.map(t => `<span class="tag entity" onclick='event.stopPropagation();setTagFilter("org", ${JSON.stringify(t)})'>${escapeHtml(t)}</span>`)
     ].join("");
@@ -1835,7 +1869,7 @@ function openModal(feedIndex) {
 
   // Tags
   const tagsHtml = [
-    ...r.issues.map(t => `<span class="tag issue">${escapeHtml(t)}</span>`),
+    ...r.issues.map(t => `<span class="tag issue">${escapeHtml(formatIssue(t))}</span>`),
     ...r.entities_people.map(t => `<span class="tag entity">@${escapeHtml(t)}</span>`),
     ...r.entities_orgs.map(t => `<span class="tag entity">${escapeHtml(t)}</span>`)
   ].join("");
@@ -1935,15 +1969,6 @@ document.getElementById("search").addEventListener("input", () => applyFilters()
 document.getElementById("rangeSel").addEventListener("change", e => { currentDays = Number(e.target.value); applyFilters(); });
 document.getElementById("refreshBtn").addEventListener("click", loadData);
 document.getElementById("exportBtn").addEventListener("click", exportCSV);
-document.querySelectorAll("#leanPills .pill").forEach(p => {
-  p.addEventListener("click", () => {
-    document.querySelectorAll("#leanPills .pill").forEach(x => x.classList.remove("active"));
-    p.classList.add("active");
-    currentLean = p.dataset.lean;
-    applyFilters();
-  });
-});
-
 // Unified setter so the top dropdown and Office Mix cards stay in sync
 function setOfficeFilter(office) {
   currentOfficeFilter = office;

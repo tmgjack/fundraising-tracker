@@ -1670,8 +1670,14 @@ function renderSenders() {
 
 function renderFeed() {
   const feed = document.getElementById("feed");
-  const sorted = filtered.slice().sort((a, b) => new Date(b.received_at) - new Date(a.received_at)).slice(0, 30);
-  if (!sorted.length) { feed.innerHTML = '<div class="state">No emails match these filters.</div>'; return; }
+const sorted = filtered.slice().sort((a, b) => {
+  const ta = new Date(a.received_at).getTime();
+  const tb = new Date(b.received_at).getTime();
+  if (isNaN(ta) && isNaN(tb)) return 0;
+  if (isNaN(ta)) return 1;
+  if (isNaN(tb)) return -1;
+  return tb - ta;
+}).slice(0, 30);  if (!sorted.length) { feed.innerHTML = '<div class="state">No emails match these filters.</div>'; return; }
   window._feedRows = sorted;
   feed.innerHTML = sorted.map((r, i) => {
     const when = new Date(r.received_at);

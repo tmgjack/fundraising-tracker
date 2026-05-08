@@ -1252,7 +1252,7 @@ function renderIssueChart() {
     data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
     options: {
       ...chartOpts({ indexAxis: 'y' }),
-      // Match the font scale of the bar-list panels below (13px, slightly heavier)
+      // Match the font scale of the bar-list panels below (13px, body-style serif)
       scales: {
         ...chartOpts({ indexAxis: 'y' }).scales,
         y: {
@@ -1263,17 +1263,45 @@ function renderIssueChart() {
           }
         }
       },
+      // 'y' interaction mode means: a click anywhere along a horizontal row triggers
+      // that row's data point — even clicks on the empty whitespace next to a short bar
+      // or on the label area. This is the fix for "clicks don't work on short bars."
+      interaction: { mode: 'y', intersect: false },
       plugins: { legend: { display: false }, tooltip: tooltipStyle() },
-      onClick: (evt, elements) => {
-        if (elements.length) {
+      onClick: (evt, elements, chart) => {
+        // With mode:'y' Chart.js gives us the row element directly.
+        if (elements && elements.length) {
           const idx = elements[0].index;
-          setTagFilter('issue', rawLabels[idx]);  // Filter by raw tag, not display label
+          setTagFilter('issue', rawLabels[idx]);
+          return;
+        }
+        // Fallback: figure out which row was clicked from the y-pixel position
+        const rect = chart.canvas.getBoundingClientRect();
+        const yPx = (evt.native ? evt.native.clientY : evt.y) - rect.top;
+        const yScale = chart.scales.y;
+        if (!yScale) return;
+        const stepHeight = (yScale.bottom - yScale.top) / labels.length;
+        const idx = Math.floor((yPx - yScale.top) / stepHeight);
+        if (idx >= 0 && idx < rawLabels.length) {
+          setTagFilter('issue', rawLabels[idx]);
         }
       },
-      onHover: (evt, elements) => {
-        if (evt.native && evt.native.target) {
+      onHover: (evt, elements, chart) => {
+        if (!evt.native || !evt.native.target) return;
+        // Cursor goes to pointer if mouse is anywhere within the chart's plot area —
+        // since clicks work on whole rows now, hovering should signal the same.
+        const yScale = chart && chart.scales && chart.scales.y;
+        const xScale = chart && chart.scales && chart.scales.x;
+        if (!yScale || !xScale) {
           evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          return;
         }
+        const rect = chart.canvas.getBoundingClientRect();
+        const xPx = evt.native.clientX - rect.left;
+        const yPx = evt.native.clientY - rect.top;
+        const insideY = yPx >= yScale.top && yPx <= yScale.bottom;
+        const insideX = xPx >= 0 && xPx <= xScale.right;   // include label area on the left
+        evt.native.target.style.cursor = (insideX && insideY) ? 'pointer' : 'default';
       }
     }
   });

@@ -984,6 +984,43 @@ function formatIssue(s) {
     .join(' ');
 }
 
+// Known acronyms that should always render in all caps when displayed.
+// Add to this list as new ones turn up in the data.
+const ORG_ACRONYMS = new Set([
+  'NRCC', 'DCCC', 'DSCC', 'NRSC', 'DNC', 'RNC', 'DGA', 'RGA', 'DLCC',
+  'NRA', 'NRA-PVF', 'PVF', 'AOC', 'PAC', 'PACS', 'SUPERPAC',
+  'AFL-CIO', 'SEIU', 'AFT', 'NEA', 'UAW', 'UFCW', 'IBEW', 'CWA',
+  'ACLU', 'NAACP', 'AIPAC', 'JStreet',
+  'GOP', 'MAGA', 'ICE', 'DOJ', 'FBI', 'CIA', 'NSA', 'DHS', 'EPA',
+  'IRS', 'CDC', 'FDA', 'USDA', 'HUD', 'VA', 'DOD',
+  'IVF', 'LGBTQ', 'LGBTQ+', 'ERA',
+  'PP', 'PPFA', 'PPAF',
+  'ACA', 'CHIP',
+  'USA', 'US', 'UK', 'EU', 'UN', 'NATO',
+  'TPUSA', 'AFP', 'CPAC', 'NRSC', 'WFP', 'PCCC',
+]);
+
+// Word-by-word title casing with acronym preservation.
+// "national republicans" -> "National Republicans"
+// "nrcc" -> "NRCC"
+// "the messina group" -> "The Messina Group"
+// "club for growth" -> "Club for Growth" (small connecting words stay lowercase)
+function formatOrg(s) {
+  if (!s) return s;
+  const lowerWords = new Set(['for', 'of', 'and', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'with']);
+  return String(s).trim().split(/\s+/).map((word, idx) => {
+    const upper = word.toUpperCase();
+    // Acronym in our known list?
+    if (ORG_ACRONYMS.has(upper)) return upper;
+    // Original was already all caps and short → probably an acronym we haven't seen
+    if (word === upper && word.length >= 2 && word.length <= 5 && /^[A-Z0-9-]+$/.test(word)) return word;
+    // Connecting word in the middle of a phrase → lowercase (but not the first word)
+    if (idx > 0 && lowerWords.has(word.toLowerCase())) return word.toLowerCase();
+    // Default: title case
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+}
+
 // Canonicalize person names — merge Trump variants, etc.
 const PERSON_ALIASES = {
   'donald trump': 'Trump',
@@ -1222,7 +1259,7 @@ function renderIssueChart() {
           ...chartOpts({ indexAxis: 'y' }).scales.y,
           ticks: {
             color: '#1a1a1f',
-            font: { family: 'Roboto', size: 13, weight: '500' }
+            font: { family: 'IBM Plex Serif', size: 13, weight: '500' }
           }
         }
       },
@@ -1243,53 +1280,65 @@ function renderIssueChart() {
 }
 
 function renderPeople() {
-  // Opposition Targets — preferred source: the AI's `opposition_targets` field
-  // (added to the n8n prompt — the AI decides who's a target with full context).
+  // Opposition Targets — preferred source: the AI's `opposition_targets` field.
+  // Falls back to tightened client-side logic for rows without that field.
   //
-  // For rows that don't have this field yet (older rows processed before the prompt
-  // change, or any row where the AI returned an empty list), we fall back to a
-  // tightened version of the old client-side logic:
-  //   - Cross-party mentions count as targets
-  //   - Same-party mentions are excluded
-  //   - The email's OWN sender is always excluded (this fixes the Angie Craig bug)
-  //   - Unknown-affiliation people are EXCLUDED, not included (conservative default)
+  // CASE-INSENSITIVE COUNTING:
+  // We count by lowercased key (so "JD Vance" + "jd vance" + "Jd Vance" merge).
+  // For display, we preserve the BEST-CASED variant we've seen — preferring
+  // mixed-case names ("JD Vance") over lowercase ("jd vance").
 
-  const counts = {};
+  const buckets = {};   // lowercase-key -> { display, count }
 
-  // Helper: does a name look like the email's own sender? Match against sender_org and from_name.
+  function addCount(person, row, allowFn) {
+    if (!person) return;
+    const pLower = person.toLowerCase();
+    if (isSelfReference(pLower, row)) return;
+    if (allowFn && !allowFn(pLower)) return;
+
+    if (!buckets[pLower]) {
+      buckets[pLower] = { display: person.trim(), count: 1 };
+    } else {
+      buckets[pLower].count++;
+      // If the new variant has more uppercase letters than the saved one,
+      // it's probably better-cased ("JD Vance" beats "jd vance").
+      const upperOf = (s) => (s.match(/[A-Z]/g) || []).length;
+      if (upperOf(person) > upperOf(buckets[pLower].display)) {
+        buckets[pLower].display = person.trim();
+      }
+    }
+  }
+
+  // Helper: is this person the email's own sender?
   function isSelfReference(personLower, row) {
     const senderOrg = (row.sender_org || '').toLowerCase();
     const fromName = (row.from_name || '').toLowerCase();
-    // Direct match
     if (senderOrg.includes(personLower) || fromName.includes(personLower)) return true;
-    // Sender's last-name in person string (e.g. row "Angie Craig for Minnesota" matches "Angie Craig" or just "Craig")
     const tokens = personLower.split(/\s+/).filter(t => t.length > 2);
     return tokens.some(t => senderOrg.includes(t) || fromName.includes(t));
   }
 
   filtered.forEach(r => {
-    // PRIMARY PATH: trust the AI's opposition_targets if it exists for this row.
+    // PRIMARY PATH: AI-tagged opposition_targets.
     if (r.opposition_targets && r.opposition_targets.length) {
-      r.opposition_targets.forEach(person => {
-        const pLower = person.toLowerCase();
-        // Final safety: skip if it's the sender (AI should already have done this, but belt and suspenders)
-        if (isSelfReference(pLower, r)) return;
-        counts[person] = (counts[person] || 0) + 1;
-      });
+      r.opposition_targets.forEach(person => addCount(person, r));
       return;
     }
-
-    // FALLBACK PATH: for older rows without AI-tagged opposition.
+    // FALLBACK PATH: tightened cross-party logic.
     const lean = r.party_lean;
     r.entities_people.forEach(person => {
-      const pLower = person.toLowerCase();
-      if (isSelfReference(pLower, r)) return;            // never count own sender
-      const personParty = guessPersonParty(pLower);
-      if (personParty === 'unknown') return;              // conservative: skip unknowns
-      if (personParty === lean) return;                   // same-party = ally, skip
-      counts[person] = (counts[person] || 0) + 1;
+      addCount(person, r, (pLower) => {
+        const personParty = guessPersonParty(pLower);
+        if (personParty === 'unknown') return false;
+        if (personParty === lean) return false;
+        return true;
+      });
     });
   });
+
+  // Convert bucket map back to a counts object using the best-cased display name as the key.
+  const counts = {};
+  Object.values(buckets).forEach(b => { counts[b.display] = b.count; });
 
   renderClickableBarList("peopleList", counts, "person");
 }
@@ -1763,8 +1812,16 @@ function renderPalantir() {
   `;
 }
 function renderOrgs() {
+  // Case-insensitive count: merge "actblue" + "ActBlue" + "ACTBLUE", apply formatOrg for display.
+  const buckets = {};   // lowercase-key -> { display, count }
+  filtered.forEach(r => r.entities_orgs.forEach(t => {
+    if (!t) return;
+    const k = t.toLowerCase().trim();
+    if (!buckets[k]) buckets[k] = { display: formatOrg(t), count: 1 };
+    else buckets[k].count++;
+  }));
   const counts = {};
-  filtered.forEach(r => r.entities_orgs.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  Object.values(buckets).forEach(b => { counts[b.display] = b.count; });
   renderClickableBarList("orgsList", counts, "org");
 }
 function renderClickableBarList(elId, counts, tagType) {
@@ -1782,22 +1839,41 @@ function renderClickableBarList(elId, counts, tagType) {
 }
 
 function renderSenders() {
-  const counts = {};
-  const leans = {};
+  // Case-insensitive merge: "DSCC" + "dscc" + "Dscc" all collapse into one row.
+  // For display, run through formatOrg so we get "DSCC" / "Trump National Committee" properly cased.
+  const buckets = {};   // lowercase-key -> { display, count, lean }
   filtered.forEach(r => {
-    const k = r.sender_org || r.from_name || r.from_domain;
-    counts[k] = (counts[k] || 0) + 1;
-    leans[k] = r.party_lean;
+    const raw = r.sender_org || r.from_name || r.from_domain;
+    if (!raw) return;
+    const k = raw.toLowerCase().trim();
+    if (!buckets[k]) {
+      buckets[k] = { display: formatOrg(raw), count: 1, lean: r.party_lean };
+    } else {
+      buckets[k].count++;
+      // Prefer better-cased variant if a new one shows up
+      const upperCount = (s) => (s.match(/[A-Z]/g) || []).length;
+      const newDisplay = formatOrg(raw);
+      if (upperCount(newDisplay) > upperCount(buckets[k].display)) {
+        buckets[k].display = newDisplay;
+      }
+    }
   });
+
   const list = document.getElementById("sendersList");
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const sorted = Object.values(buckets).sort((a, b) => b.count - a.count).slice(0, 15);
   if (!sorted.length) { list.innerHTML = '<div class="state">No emails in current view.</div>'; return; }
-  const max = sorted[0][1];
-  list.innerHTML = sorted.map(([name, n]) => `
-    <div class="bar-row ${leans[name] === 'democrat' ? 'dem' : leans[name] === 'republican' ? 'rep' : ''}">
-      <div class="label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
-      <div class="bar"><span style="width:${(n/max*100).toFixed(1)}%"></span></div>
-      <div class="num">${n}</div>
+  const max = sorted[0].count;
+
+  // Clicking a sender drops their name in the search box and re-applies filters.
+  // (There's no "sender" tag-filter type, but the search box already matches against sender_org.)
+  list.innerHTML = sorted.map(b => `
+    <div class="bar-row ${b.lean === 'democrat' ? 'dem' : b.lean === 'republican' ? 'rep' : ''}"
+         style="cursor:pointer"
+         onclick='document.getElementById("search").value=${JSON.stringify(b.display)}; applyFilters();'
+         title="Click to filter to ${escapeHtml(b.display)}">
+      <div class="label">${escapeHtml(b.display)}</div>
+      <div class="bar"><span style="width:${(b.count/max*100).toFixed(1)}%"></span></div>
+      <div class="num">${b.count}</div>
     </div>
   `).join("");
 }

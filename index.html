@@ -1014,7 +1014,7 @@ function canonPerson(name) {
 
 const EXCLUDED_ORGS = new Set([
   'actblue', 'act blue', 'winred', 'win red',
-  'the messina group', 'messina group', 'tmg', 'themessinagroup', 'messina grp',
+  'the messina group', 'messina group', 'tmg', 'themessinagroup', 'messina grp', 'the messina grp',
 ]);
 function filterOrgs(orgs) {
   return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));

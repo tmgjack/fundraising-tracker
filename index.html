@@ -1049,10 +1049,16 @@ function applyFilters() {
       if (!hay.includes(q)) return false;
     }
     if (activeTagFilter) {
-      const list = activeTagFilter.type === 'issue' ? r.issues
-                 : activeTagFilter.type === 'person' ? r.entities_people
-                 : r.entities_orgs;
-      if (!list.map(x => x.toLowerCase()).includes(activeTagFilter.value.toLowerCase())) return false;
+      const val = activeTagFilter.value.toLowerCase();
+      if (activeTagFilter.type === 'issue') {
+        if (!r.issues.map(x => x.toLowerCase()).includes(val)) return false;
+      } else if (activeTagFilter.type === 'person') {
+        const inPeople = r.entities_people.map(x => x.toLowerCase()).includes(val);
+        const inOppo = r.opposition_targets.map(x => x.toLowerCase()).includes(val);
+        if (!inPeople && !inOppo) return false;
+      } else {
+        if (!r.entities_orgs.map(x => x.toLowerCase()).includes(val)) return false;
+      }
     }
     if (activeStateFilter) {
       if (classifySender(r).state !== activeStateFilter) return false;

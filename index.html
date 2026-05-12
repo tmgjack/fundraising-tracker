@@ -905,6 +905,7 @@ let charts = {};
 let currentLean = "all";
 let currentDays = 14;
 let activeTagFilter = null;
+let activeStateFilter = null;
 
 async function loadData() {
   document.getElementById("status").textContent = "Loading…";
@@ -1050,6 +1051,9 @@ function applyFilters() {
                  : r.entities_orgs;
       if (!list.map(x => x.toLowerCase()).includes(activeTagFilter.value.toLowerCase())) return false;
     }
+    if (activeStateFilter) {
+      if (classifySender(r).state !== activeStateFilter) return false;
+    }
     return true;
   });
   renderActiveFilter();
@@ -1058,10 +1062,15 @@ function applyFilters() {
 
 function renderActiveFilter() {
   const el = document.getElementById('activeFilters');
-  if (!activeTagFilter) { el.innerHTML = ''; return; }
-  el.innerHTML = `<span class="active-filter">${escapeHtml(activeTagFilter.type)}: ${escapeHtml(activeTagFilter.value)}<button onclick="clearTagFilter()">×</button></span>`;
+  const parts = [];
+  const q = document.getElementById('search').value.trim();
+  if (q) parts.push(`<span class="active-filter">search: ${escapeHtml(q)}<button onclick="document.getElementById('search').value='';applyFilters()">×</button></span>`);
+  if (activeTagFilter) parts.push(`<span class="active-filter">${escapeHtml(activeTagFilter.type)}: ${escapeHtml(activeTagFilter.value)}<button onclick="clearTagFilter()">×</button></span>`);
+  if (activeStateFilter) parts.push(`<span class="active-filter">state: ${escapeHtml(activeStateFilter)}<button onclick="clearStateFilter()">×</button></span>`);
+  el.innerHTML = parts.join('');
 }
 function clearTagFilter() { activeTagFilter = null; applyFilters(); }
+function clearStateFilter() { activeStateFilter = null; selectedState = null; applyFilters(); }
 function setTagFilter(type, value) {
   if (activeTagFilter && activeTagFilter.type === type && activeTagFilter.value === value) {
     activeTagFilter = null;
@@ -1515,8 +1524,14 @@ function renderGeography() {
   grid.querySelectorAll('.tile.has-data').forEach(t => {
     t.addEventListener('click', () => {
       const s = t.dataset.state;
-      selectedState = (selectedState === s) ? null : s;
-      renderGeography();
+      if (selectedState === s) {
+        selectedState = null;
+        activeStateFilter = null;
+      } else {
+        selectedState = s;
+        activeStateFilter = s;
+      }
+      applyFilters();
     });
   });
 
@@ -1839,6 +1854,7 @@ document.getElementById("exportBtn").addEventListener("click", exportCSV);
 function setOfficeFilter(office) {
   currentOfficeFilter = office;
   selectedState = null;
+  activeStateFilter = null;
   const sel = document.getElementById("officeSel");
   if (sel && sel.value !== office) sel.value = office;
   applyFilters();

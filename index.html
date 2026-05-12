@@ -190,7 +190,10 @@
   .bar-row {
     display: grid; grid-template-columns: 130px 1fr 40px;
     align-items: center; gap: 10px; font-size: 13px;
+    border-radius: 4px; padding: 2px 4px; transition: background 0.15s;
   }
+  .bar-row:hover { background: rgba(255,255,255,0.06); }
+  .bar-row:hover .label::after { content: ' ⌕'; font-size: 11px; opacity: 0.5; }
   .bar-row .label {
     color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -1076,6 +1079,7 @@ function setTagFilter(type, value) {
     activeTagFilter = null;
   } else {
     activeTagFilter = { type, value };
+    setTimeout(() => document.getElementById('feed').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
   applyFilters();
 }
@@ -1235,6 +1239,18 @@ function renderIssueChart() {
 function renderPeople() {
   const buckets = {};
 
+  // Build a set of known Democrat sender name tokens to exclude from opposition targets
+  const demSenderTokens = new Set();
+  allRows.filter(r => r.party_lean === 'democrat').forEach(r => {
+    const names = [r.sender_org, r.from_name].filter(Boolean);
+    names.forEach(n => n.toLowerCase().split(/\s+/).filter(t => t.length > 2).forEach(t => demSenderTokens.add(t)));
+  });
+
+  function isDemSender(personLower) {
+    const tokens = personLower.split(/\s+/).filter(t => t.length > 2);
+    return tokens.length > 0 && tokens.every(t => demSenderTokens.has(t));
+  }
+
   function addCount(person, row, allowFn) {
     if (!person) return;
     const pLower = person.toLowerCase();
@@ -1259,7 +1275,9 @@ function renderPeople() {
 
   filtered.forEach(r => {
     if (r.opposition_targets && r.opposition_targets.length) {
-      r.opposition_targets.forEach(person => addCount(person, r));
+      r.opposition_targets.forEach(person => {
+        if (!isDemSender(person.toLowerCase())) addCount(person, r);
+      });
       return;
     }
     const lean = r.party_lean;

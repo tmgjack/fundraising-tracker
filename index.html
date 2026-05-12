@@ -1184,18 +1184,40 @@ function renderVolumeChart() {
 }
 
 function renderIssueChart() {
+  // Always count from the full base-filtered set (ignoring any issue tag filter)
+  // so the chart never collapses to a single bar when you click one
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const cutoff = Date.now() - currentDays * 86400000;
+  const baseRows = allRows.filter(r => {
+    const t = new Date(r.received_at).getTime();
+    if (!isNaN(t) && t < cutoff) return false;
+    if (currentLean !== "all" && r.party_lean !== currentLean) return false;
+    if (currentOfficeFilter !== "all" && classifySender(r).office !== currentOfficeFilter) return false;
+    if (q) {
+      const hay = (r.subject + " " + r.from_name + " " + r.from_email + " " + r.one_line_summary + " " + r.body_text + " " + r.issues.join(" ") + " " + r.entities_people.join(" ") + " " + r.entities_orgs.join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (activeStateFilter && classifySender(r).state !== activeStateFilter) return false;
+    return true;
+  });
+
   const counts = {};
-  filtered.forEach(r => r.issues.forEach(t => counts[t] = (counts[t] || 0) + 1));
+  baseRows.forEach(r => r.issues.forEach(t => counts[t] = (counts[t] || 0) + 1));
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
   const labels = sorted.map(x => formatIssue(x[0]));
   const rawLabels = sorted.map(x => x[0]);
   const data = sorted.map(x => x[1]);
 
+  const activeIssue = (activeTagFilter && activeTagFilter.type === 'issue') ? activeTagFilter.value : null;
+  const colors = rawLabels.map(l =>
+    !activeIssue ? '#6f2740' : l === activeIssue ? '#c0394f' : 'rgba(111,39,64,0.3)'
+  );
+
   const ctx = document.getElementById("issueChart");
   if (charts.issue) charts.issue.destroy();
   charts.issue = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: '#6f2740', borderRadius: 2 }] },
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 2 }] },
     options: {
       ...chartOpts({ indexAxis: 'y' }),
       scales: {

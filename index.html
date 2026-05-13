@@ -1303,7 +1303,7 @@ function renderPeople() {
     return tokens.some(t => senderOrg.includes(t) || fromName.includes(t));
   }
 
-  getBaseRows().forEach(r => {
+  getContextRows().forEach(r => {
     if (r.opposition_targets && r.opposition_targets.length) {
       r.opposition_targets.forEach(person => {
         if (!isDemSender(person.toLowerCase())) addCount(person, r);
@@ -1672,6 +1672,12 @@ function renderPalantir() {
     <div class="palantir-list">${items}</div>`;
 }
 
+// When an issue filter is active, use the filtered set so oppo/orgs/senders react.
+// When a person/org filter is active, use base rows so those panels don't collapse.
+function getContextRows() {
+  return (activeTagFilter && activeTagFilter.type === 'issue') ? filtered : getBaseRows();
+}
+
 function getBaseRows() {
   const q = document.getElementById("search").value.trim().toLowerCase();
   const cutoff = Date.now() - currentDays * 86400000;
@@ -1691,7 +1697,7 @@ function getBaseRows() {
 
 function renderOrgs() {
   const buckets = {};
-  getBaseRows().forEach(r => r.entities_orgs.forEach(t => {
+  getContextRows().forEach(r => r.entities_orgs.forEach(t => {
     if (!t) return;
     const k = t.toLowerCase().trim();
     if (!buckets[k]) buckets[k] = { display: formatOrg(t), count: 1 };
@@ -1723,7 +1729,7 @@ function renderClickableBarList(elId, counts, tagType) {
 
 function renderSenders() {
   const buckets = {};
-  filtered.forEach(r => {
+  getContextRows().forEach(r => {
     const raw = r.sender_org || r.from_name || r.from_domain;
     if (!raw) return;
     const k = raw.toLowerCase().trim();

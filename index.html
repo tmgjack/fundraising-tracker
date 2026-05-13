@@ -1229,7 +1229,10 @@ function renderIssueChart() {
         ...chartOpts({ indexAxis: 'y' }).scales,
         y: {
           ...chartOpts({ indexAxis: 'y' }).scales.y,
-          ticks: { color: '#1a1a1f', font: { family: 'IBM Plex Serif', size: 13, weight: '500' } }
+          ticks: {
+            color: (ctx) => (activeIssue && rawLabels[ctx.index] === activeIssue) ? '#000' : '#1a1a1f',
+            font: (ctx) => ({ family: 'IBM Plex Serif', size: 13, weight: (activeIssue && rawLabels[ctx.index] === activeIssue) ? '700' : '500' })
+          }
         }
       },
       interaction: { mode: 'y', intersect: false },

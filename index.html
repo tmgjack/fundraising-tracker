@@ -945,7 +945,7 @@ function normalizeRow(r) {
     sender_org: (r.sender_org && r.sender_org.toLowerCase() !== 'unknown' ? r.sender_org : null) || r.from_name || (r.from_email && r.from_email.includes("@") ? r.from_email.split("@")[1] : "") || "",
     state: (r.state || "").toString().trim().toUpperCase(),
     office_type: (r.office_type || "").toString().trim().toLowerCase(),
-    issues: splitTags(r.issues),
+    issues: splitTags(r.issues).map(canonIssue),
     entities_people: canonPersonList(splitTags(r.entities_people)),
     entities_orgs: filterOrgs(splitTags(r.entities_orgs)),
     opposition_targets: canonPersonList(splitTags(r.opposition_targets)),
@@ -953,6 +953,29 @@ function normalizeRow(r) {
     body_text: r.body_text || r.body_excerpt || "",
     gmail_url: r.gmail_url || ""
   };
+}
+
+const ISSUE_ALIASES = {
+  'health care': 'healthcare',
+  'health-care': 'healthcare',
+  'gun control': 'gun-control',
+  'gun safety': 'gun-control',
+  'gun violence': 'gun-control',
+  'climate change': 'climate',
+  'climate crisis': 'climate',
+  'social security': 'social-security',
+  'voting rights': 'voting-rights',
+  'civil rights': 'civil-rights',
+  'immigration reform': 'immigration',
+  'reproductive rights': 'abortion',
+  'reproductive freedom': 'abortion',
+  'womens rights': 'abortion',
+  "women's rights": 'abortion',
+};
+
+function canonIssue(s) {
+  const key = s.trim().toLowerCase();
+  return ISSUE_ALIASES[key] || key;
 }
 
 function splitTags(s) {

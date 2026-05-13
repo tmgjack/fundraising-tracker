@@ -1085,7 +1085,6 @@ function setTagFilter(type, value) {
     activeTagFilter = null;
   } else {
     activeTagFilter = { type, value };
-    setTimeout(() => document.getElementById('feed').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
   applyFilters();
 }
@@ -1301,7 +1300,7 @@ function renderPeople() {
     return tokens.some(t => senderOrg.includes(t) || fromName.includes(t));
   }
 
-  filtered.forEach(r => {
+  getBaseRows().forEach(r => {
     if (r.opposition_targets && r.opposition_targets.length) {
       r.opposition_targets.forEach(person => {
         if (!isDemSender(person.toLowerCase())) addCount(person, r);
@@ -1670,9 +1669,26 @@ function renderPalantir() {
     <div class="palantir-list">${items}</div>`;
 }
 
+function getBaseRows() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const cutoff = Date.now() - currentDays * 86400000;
+  return allRows.filter(r => {
+    const t = new Date(r.received_at).getTime();
+    if (!isNaN(t) && t < cutoff) return false;
+    if (currentLean !== "all" && r.party_lean !== currentLean) return false;
+    if (currentOfficeFilter !== "all" && classifySender(r).office !== currentOfficeFilter) return false;
+    if (q) {
+      const hay = (r.subject + " " + r.from_name + " " + r.from_email + " " + r.one_line_summary + " " + r.body_text + " " + r.issues.join(" ") + " " + r.entities_people.join(" ") + " " + r.entities_orgs.join(" ")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (activeStateFilter && classifySender(r).state !== activeStateFilter) return false;
+    return true;
+  });
+}
+
 function renderOrgs() {
   const buckets = {};
-  filtered.forEach(r => r.entities_orgs.forEach(t => {
+  getBaseRows().forEach(r => r.entities_orgs.forEach(t => {
     if (!t) return;
     const k = t.toLowerCase().trim();
     if (!buckets[k]) buckets[k] = { display: formatOrg(t), count: 1 };
@@ -1688,12 +1704,18 @@ function renderClickableBarList(elId, counts, tagType) {
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
   if (!sorted.length) { el.innerHTML = '<div class="state">No data in current view.</div>'; return; }
   const max = sorted[0][1];
-  el.innerHTML = sorted.map(([name, n]) => `
+  const activeVal = (activeTagFilter && activeTagFilter.type === tagType) ? activeTagFilter.value.toLowerCase() : null;
+  el.innerHTML = sorted.map(([name, n]) => {
+    const isActive = activeVal && name.toLowerCase() === activeVal;
+    const barColor = !activeVal ? 'var(--accent)' : isActive ? '#c0394f' : 'rgba(111,39,64,0.25)';
+    const labelStyle = isActive ? 'font-weight:700;color:var(--ink)' : activeVal ? 'color:var(--ink-dim)' : '';
+    return `
     <div class="bar-row" style="cursor:pointer" onclick='setTagFilter(${JSON.stringify(tagType)}, ${JSON.stringify(name)})'>
-      <div class="label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
-      <div class="bar"><span style="width:${(n/max*100).toFixed(1)}%"></span></div>
+      <div class="label" title="${escapeHtml(name)}" style="${labelStyle}">${escapeHtml(name)}</div>
+      <div class="bar"><span style="width:${(n/max*100).toFixed(1)}%;background:${barColor}"></span></div>
       <div class="num">${n}</div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function renderSenders() {

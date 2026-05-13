@@ -1049,7 +1049,7 @@ const OPPOSITION_ORGS = new Set([
   'nrcc', 'nrsc', 'rnc', 'rga', 'rsc', 'republican national committee',
   'national republican congressional committee', 'national republican senatorial committee',
   'republican governors association', 'house republicans', 'senate republicans',
-  'congressional republicans', 'maga republicans', 'gop',
+  'congressional republicans', 'national republicans', 'republicans', 'maga republicans', 'gop',
 ]);
 function filterOrgs(orgs) {
   return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));

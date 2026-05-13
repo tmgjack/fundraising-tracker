@@ -1042,8 +1042,11 @@ const EXCLUDED_ORGS = new Set([
   'actblue', 'act blue', 'winred', 'win red',
   // Internal / consulting
   'the messina group', 'messina group', 'tmg', 'themessinagroup', 'messina grp', 'the messina grp',
-  // Republican opposition committees — these are targets, not companies
-  'nrcc', 'nrsc', 'rnc', 'rga', 'rsc', 'nrcc', 'republican national committee',
+]);
+
+// Republican committees mentioned in Dem emails are opposition targets, not companies
+const OPPOSITION_ORGS = new Set([
+  'nrcc', 'nrsc', 'rnc', 'rga', 'rsc', 'republican national committee',
   'national republican congressional committee', 'national republican senatorial committee',
   'republican governors association', 'house republicans', 'senate republicans',
   'congressional republicans', 'maga republicans', 'gop',
@@ -1348,6 +1351,11 @@ function renderPeople() {
         if (personParty === lean) return false;
         return true;
       });
+    });
+    // Also count any opposition orgs (NRCC, RNC, etc.) mentioned in entities_orgs
+    r.entities_orgs.forEach(org => {
+      const k = org.toLowerCase().trim();
+      if (OPPOSITION_ORGS.has(k)) addCount(org, r);
     });
   });
 
@@ -1740,6 +1748,7 @@ function renderOrgs() {
     if (!t) return;
     const k = t.toLowerCase().trim();
     if (isSelfReferenceOrg(k, r)) return;
+    if (OPPOSITION_ORGS.has(k)) return;
     if (!buckets[k]) buckets[k] = { display: formatOrg(t), count: 1 };
     else buckets[k].count++;
   }));

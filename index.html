@@ -1038,8 +1038,15 @@ function canonPerson(name) {
 }
 
 const EXCLUDED_ORGS = new Set([
+  // Payment processors / infrastructure
   'actblue', 'act blue', 'winred', 'win red',
+  // Internal / consulting
   'the messina group', 'messina group', 'tmg', 'themessinagroup', 'messina grp', 'the messina grp',
+  // Republican opposition committees — these are targets, not companies
+  'nrcc', 'nrsc', 'rnc', 'rga', 'rsc', 'nrcc', 'republican national committee',
+  'national republican congressional committee', 'national republican senatorial committee',
+  'republican governors association', 'house republicans', 'senate republicans',
+  'congressional republicans', 'maga republicans', 'gop',
 ]);
 function filterOrgs(orgs) {
   return orgs.filter(o => !EXCLUDED_ORGS.has(String(o).trim().toLowerCase()));
@@ -1718,11 +1725,21 @@ function getBaseRows() {
   });
 }
 
+function isSelfReferenceOrg(orgLower, row) {
+  const senderOrg = (row.sender_org || '').toLowerCase();
+  const fromName = (row.from_name || '').toLowerCase();
+  if (senderOrg.includes(orgLower) || orgLower.includes(senderOrg)) return true;
+  if (fromName.includes(orgLower) || orgLower.includes(fromName)) return true;
+  const tokens = orgLower.split(/\s+/).filter(t => t.length > 3);
+  return tokens.length > 0 && tokens.every(t => senderOrg.includes(t) || fromName.includes(t));
+}
+
 function renderOrgs() {
   const buckets = {};
   getContextRows().forEach(r => r.entities_orgs.forEach(t => {
     if (!t) return;
     const k = t.toLowerCase().trim();
+    if (isSelfReferenceOrg(k, r)) return;
     if (!buckets[k]) buckets[k] = { display: formatOrg(t), count: 1 };
     else buckets[k].count++;
   }));
